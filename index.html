@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Die BND-Krypto-Challenge – vier Rätsel, zwölf Jahre, vier Fallen</title>
+<meta name="description" content="Wie vier Geheimtexte des BND von 2014 geknackt wurden – mit echtem DES, DEFLATE und Doppelwürfel im Browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b10; --bg2:#0c1118; --panel:#111823; --panel2:#162030; --line:#1f2a3a; --line2:#2b3a50;
+  --ink:#e9edf3; --text:#c9d3df; --dim:#8b99ab; --faint:#56657a;
+  --acc:#5cf2b0; --acc-d:#1d6b4f; --amber:#ffb547; --red:#ff6b7a; --blue:#7cc4ff; --violet:#b9a3ff;
+  --mono:"JetBrains Mono","SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --head:"Space Grotesk",Inter,system-ui,sans-serif;
+  --serif:Georgia,"Iowan Old Style",serif;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7;font-size:17.5px;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.035;background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)}
+::selection{background:var(--acc);color:#04140d}
+a{color:var(--acc);text-decoration-thickness:1px;text-underline-offset:3px}
+.wrap{max-width:860px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)} .dim{color:var(--dim)} .faint{color:var(--faint)} .small{font-size:14.5px} .tiny{font-size:12px}
+.ok{color:var(--acc)} .am{color:var(--amber)} .rd{color:var(--red)} .bl{color:var(--blue)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+
+/* ---------- top bar ---------- */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:52px;display:flex;align-items:center;gap:16px;padding:0 18px;background:rgba(8,11,16,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);transform:translateY(-100%);transition:transform .3s}
+.topbar.show{transform:none}
+.topbar .tb-title{font-family:var(--mono);font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.topbar .tb-title b{color:var(--acc);font-weight:500}
+.leds{display:flex;gap:6px;font-family:var(--mono);font-size:11px}
+.leds a{display:flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid var(--line2);border-radius:20px;color:var(--faint);text-decoration:none;transition:all .4s}
+.leds a i{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);transition:all .4s}
+.leds a.solved{color:var(--acc);border-color:var(--acc-d)}
+.leds a.solved i{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.progress{position:absolute;left:0;bottom:-1px;height:2px;background:var(--acc);width:0;box-shadow:0 0 8px var(--acc)}
+.langswitch{display:flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;font-family:var(--mono);font-size:12px}
+.langswitch button{background:transparent;border:0;color:var(--dim);padding:5px 11px;cursor:pointer;font:inherit}
+.langswitch button.on{background:var(--acc);color:#04140d;font-weight:700}
+.hero .langswitch{position:absolute;top:22px;right:22px;z-index:3;background:rgba(8,11,16,.6)}
+@media(max-width:620px){.topbar .tb-title{display:none}.leds a span{display:none}.leds a{padding:5px}}
+
+/* ---------- hero ---------- */
+.hero{position:relative;min-height:92vh;display:flex;align-items:center;padding:110px 0 70px;overflow:hidden;border-bottom:1px solid var(--line)}
+#rain{position:absolute;inset:0;width:100%;height:100%;opacity:.5}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(8,11,16,.35),rgba(8,11,16,.92) 70%);pointer-events:none}
+.hero .wrap{position:relative;z-index:2;width:100%}
+.kicker{font-family:var(--mono);color:var(--acc);font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.kicker::before{content:"";width:28px;height:1px;background:var(--acc)}
+h1{font-family:var(--head);font-size:clamp(34px,6.2vw,64px);line-height:1.04;margin:.35em 0 .35em;font-weight:700;letter-spacing:-.02em}
+h1 .glitch{color:var(--acc);display:block}
+.sub{color:var(--text);font-size:clamp(17px,2.2vw,20px);max-width:640px;line-height:1.6}
+.meta{font-family:var(--mono);color:var(--faint);font-size:12.5px;margin-top:20px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.dossiers{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:40px}
+@media(max-width:760px){.dossiers{grid-template-columns:repeat(2,1fr)}.dossier{padding-top:36px}}
+.dossier{position:relative;display:block;text-decoration:none;color:var(--ink);background:rgba(17,24,35,.82);border:1px solid var(--line2);border-radius:10px;padding:14px 14px 12px;overflow:hidden;transition:transform .2s,border-color .2s}
+.dossier:hover{transform:translateY(-3px);border-color:var(--acc-d)}
+.dossier .dn{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.dossier .dl{font-family:var(--head);font-size:21px;font-weight:700;margin:2px 0 6px}
+.dossier .dh{font-family:var(--mono);font-size:10.5px;color:var(--faint);line-height:1.45;word-break:break-all;height:46px;overflow:hidden}
+.stamp{position:absolute;right:8px;top:10px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;padding:2px 7px;border:1.5px solid currentColor;border-radius:4px;transform:rotate(6deg);color:var(--red);transition:color .4s}
+.dossier.solved .stamp{color:var(--acc)}
+.scrollhint{margin-top:38px;font-family:var(--mono);font-size:12px;color:var(--faint);display:flex;align-items:center;gap:8px}
+.scrollhint i{display:inline-block;width:1px;height:26px;background:linear-gradient(var(--acc),transparent);animation:drip 1.8s infinite}
+@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ---------- typography ---------- */
+section{padding:72px 0 8px}
+h2{font-family:var(--head);font-size:clamp(26px,3.6vw,34px);line-height:1.2;margin:0 0 20px;font-weight:700;letter-spacing:-.01em}
+h2 .no{display:inline-block;color:var(--acc);font-family:var(--mono);font-size:14px;font-weight:500;border:1px solid var(--acc-d);border-radius:6px;padding:2px 8px;vertical-align:middle;margin-right:12px;position:relative;top:-3px}
+h3{font-family:var(--head);font-size:21px;margin:40px 0 10px}
+p{margin:16px 0;color:var(--text);overflow-wrap:break-word}
+p b,li b{color:var(--ink)}
+code,kbd{font-family:var(--mono);font-size:.84em;background:#0b1017;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--acc);white-space:nowrap}
+pre{background:#0b1017;border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.6;color:#c8d3e0}
+pre .c{color:var(--faint)} pre .k{color:var(--violet)} pre .s{color:var(--amber)}
+ul{padding-left:22px} ul li{margin:7px 0;color:var(--text)}
+.hex{font-family:var(--mono);font-size:13.5px;line-height:1.75;letter-spacing:.04em;word-break:break-all}
+.bad{color:var(--red);text-decoration:underline wavy;text-underline-offset:4px}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent);margin:60px 0 0}
+
+/* ---------- callouts ---------- */
+.callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:0 var(--r) var(--r) 0;padding:14px 18px;margin:24px 0;color:var(--text)}
+.callout.warn{border-left-color:var(--red)} .callout.amber{border-left-color:var(--amber)} .callout.blue{border-left-color:var(--blue)}
+.callout .t{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--acc);margin-bottom:4px}
+.callout.warn .t{color:var(--red)} .callout.amber .t{color:var(--amber)} .callout.blue .t{color:var(--blue)}
+.fail{font-family:var(--mono);font-size:13px;color:var(--dim);border-left:2px dashed var(--line2);padding:8px 14px;margin:14px 0}
+.fail b{color:var(--red);font-weight:700;margin-right:6px}
+.bigq{font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.6vw,25px);line-height:1.5;color:var(--ink);border-left:3px solid var(--amber);padding:4px 0 4px 22px;margin:34px 0}
+
+/* ---------- dialogue ---------- */
+.dlg{display:flex;gap:14px;margin:26px 0;align-items:flex-start}
+.dlg .ava{flex:0 0 46px;width:46px;height:46px;filter:drop-shadow(0 0 8px rgba(92,242,176,.18))}
+.dlg.me .ava{filter:drop-shadow(0 0 8px rgba(124,196,255,.18))}
+.dlg .bub{min-width:0;overflow-wrap:anywhere;position:relative;background:var(--panel);border:1px solid var(--line2);border-radius:4px 14px 14px 14px;padding:12px 17px;flex:1}
+.dlg .who{font-family:var(--mono);font-size:11px;color:var(--acc);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+.dlg.me{flex-direction:row-reverse}
+.dlg.me .bub{background:var(--panel2);border-color:#2c4566;border-radius:14px 4px 14px 14px}
+.dlg.me .who{color:var(--blue);text-align:right}
+.dlg p{margin:4px 0;color:#d8e0e9}
+
+/* ---------- tables ---------- */
+.tblwrap{overflow-x:auto;margin:20px 0}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:10px 10px;text-align:left;vertical-align:top}
+th{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);font-weight:500}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:1px 9px;border-radius:20px;border:1px solid currentColor;white-space:nowrap}
+
+/* ---------- timeline ---------- */
+.tl{position:relative;margin:30px 0 10px;padding-left:28px}
+.tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--line2),var(--acc-d),var(--acc))}
+.tl .ev{position:relative;margin:0 0 20px}
+.tl .ev::before{content:"";position:absolute;left:-27px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2px solid var(--line2)}
+.tl .ev.hot::before{border-color:var(--acc);background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.tl .ev.red::before{border-color:var(--red)}
+.tl .when{font-family:var(--mono);font-size:12.5px;color:var(--amber)}
+.tl .what{color:var(--text);font-size:15.5px}
+
+/* ---------- playground ---------- */
+.play{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line2);border-radius:14px;margin:32px 0;overflow:hidden}
+.play .pbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25)}
+.play .pbar .tl3{display:flex;gap:6px}
+.play .pbar .tl3 i{width:10px;height:10px;border-radius:50%;background:#3a2830}
+.play .pbar .tl3 i:nth-child(2){background:#3a3428} .play .pbar .tl3 i:nth-child(3){background:#1f3a30}
+.play .ptitle{font-family:var(--mono);font-size:12px;color:var(--acc);letter-spacing:.14em;text-transform:uppercase;flex:1}
+.play .pcount{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+.play .pbody{padding:18px 20px 20px}
+.play .stage{min-height:60px}
+.pstep{display:none}
+.pstep.on{display:block;animation:fade .4s}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.pstep > p:first-child{margin-top:0}
+.btnrow{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap}
+button{font:inherit}
+button.step{background:var(--acc);border:none;color:#04140d;font-weight:700;font-family:var(--mono);font-size:13.5px;padding:9px 18px;border-radius:8px;cursor:pointer;transition:filter .15s,transform .1s}
+button.step:hover{filter:brightness(1.12)} button.step:active{transform:translateY(1px)}
+button.step:disabled{background:var(--line2);color:var(--faint);cursor:default;filter:none}
+button.ghost{background:transparent;border:1px solid var(--line2);color:var(--dim);font-family:var(--mono);font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .15s}
+button.ghost:hover{color:var(--ink);border-color:var(--dim)}
+button.ghost.on{color:var(--amber);border-color:var(--amber)}
+button.chip{background:#0b1017;border:1px solid var(--line2);color:var(--amber);font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:20px;cursor:pointer}
+button.chip:hover{border-color:var(--amber)}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line2);transition:all .3s}
+.dots i.done{background:var(--acc)}
+.dots i.cur{background:var(--amber);box-shadow:0 0 8px var(--amber);width:20px;border-radius:5px}
+.result{font-family:var(--mono);font-size:14px;background:#0a0e14;border:1px dashed var(--acc-d);border-radius:8px;padding:12px 14px;color:var(--acc);margin-top:12px;word-break:break-word}
+.result.neutral{border-color:var(--line2);color:var(--text)}
+.result .lbl{color:var(--faint);display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;margin-bottom:5px}
+.kv{font-family:var(--mono);font-size:13px;color:var(--dim)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+input[type=text]{background:#0a0e14;border:1px solid var(--line2);color:var(--ink);font-family:var(--mono);font-size:15px;padding:8px 12px;border-radius:8px;min-width:0}
+input[type=text]:focus{border-color:var(--acc);outline:none}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.scrollx{overflow-x:auto;padding-bottom:4px}
+
+/* transposition */
+.tt-grid{font-family:var(--mono);font-size:14px;border-collapse:separate;border-spacing:3px;margin:10px auto;width:auto}
+.tt-grid td{border:1px solid var(--line2);width:30px;height:30px;padding:0;text-align:center;vertical-align:middle;color:var(--ink);border-radius:5px;background:#0b1017;transition:background .25s,color .25s,border-color .25s}
+.tt-grid td.hdr{color:var(--acc);border-color:transparent;background:transparent;font-weight:700;line-height:1.1;height:38px}
+.tt-grid td.hdr small{display:block;color:var(--amber);font-size:10px;font-weight:400}
+.tt-grid td.sel{background:#1b3247;border-color:var(--blue)}
+.tt-grid td.fill{background:#123326;border-color:var(--acc-d);color:var(--acc)}
+.tt-grid td.empty{border-style:dashed;opacity:.35}
+.tt-grid td.colon{border-color:var(--amber)}
+.tapebox{font-family:var(--mono);font-size:14px;letter-spacing:.08em;word-break:break-all;line-height:1.8;background:#0a0e14;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0}
+.tapebox .u{color:var(--faint)} .tapebox .h{color:var(--amber);background:#2a2110;border-radius:3px}
+.tapebox .d{color:var(--acc)}
+
+/* bars */
+.barwrap{display:flex;align-items:flex-end;gap:2px;height:110px;margin:14px 0 4px;padding:8px 8px 0;background:#0a0e14;border:1px solid var(--line);border-radius:8px;position:relative}
+.barwrap .half{position:absolute;left:0;right:0;border-top:1px dashed var(--faint);opacity:.5}
+.barwrap .half span{position:absolute;right:6px;top:-16px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.bar{flex:1;background:#33445c;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s,background .2s;cursor:pointer}
+.bar:hover{background:var(--blue)}
+.bar.hot{background:var(--amber)}
+.bar.sel{outline:2px solid var(--acc);outline-offset:1px}
+.axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--faint);padding:0 8px}
+
+/* histograms */
+.hists{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+@media(max-width:640px){.hists{grid-template-columns:1fr}}
+.hist{background:#0a0e14;border:1px solid var(--line);border-radius:8px;padding:10px}
+.hist canvas{width:100%;height:70px;display:block}
+.hist .hn{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.hist .hv{font-family:var(--mono);font-size:20px;font-weight:700}
+.meter{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .6s}
+
+/* bit dissection */
+.bits{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0}
+.bitf{border:1px solid var(--line2);border-radius:6px;padding:6px 8px;text-align:center;font-family:var(--mono);background:#0a0e14}
+.bitf .bv{font-size:15px;letter-spacing:.12em;color:var(--ink)}
+.bitf .bn{font-size:10px;color:var(--amber);letter-spacing:.08em}
+.bitf .bx{font-size:11px;color:var(--acc)}
+
+/* lz77 */
+.lz{font-family:var(--mono);font-size:14.5px;line-height:2;background:#0a0e14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;word-break:break-word}
+.lz .ref{background:#2a2110;color:var(--amber);border-radius:3px;cursor:pointer;padding:1px 0;border-bottom:1px solid var(--amber)}
+.lz .ref:hover,.lz .ref.act{background:var(--amber);color:#1a1205}
+.lz .src{background:#123326;color:var(--acc);border-radius:3px}
+
+/* xor lanes */
+.lanes{font-family:var(--mono);font-size:12.5px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;min-width:760px}
+.lanes .ln{color:var(--faint);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;text-align:right}
+.lane{display:grid;grid-template-columns:repeat(40,1fr);gap:2px}
+.lane span{height:24px;display:flex;align-items:center;justify-content:center;background:#0b1017;border:1px solid var(--line);border-radius:3px;color:var(--faint);white-space:pre;transition:all .2s}
+.lane span.na{opacity:.18}
+.lane span.crib{background:#2a2110;border-color:var(--amber);color:var(--amber)}
+.lane span.cp{background:#14233a;border-color:var(--blue);color:var(--blue)}
+.lane span.cp.bad{background:#341620;border-color:var(--red);color:var(--red);text-decoration:none}
+.lane span.known{background:#123326;border-color:var(--acc-d);color:var(--acc)}
+.lane span.solo{border-style:dashed}
+.lane.key span{font-size:9.5px}
+.heat{display:flex;gap:1px;height:26px;margin:4px 0 2px}
+.heat i{flex:1;background:var(--acc);border-radius:1px;cursor:pointer;opacity:.1}
+.heat i.cur{outline:1.5px solid var(--amber)}
+.keyprog{display:flex;gap:2px;margin-top:6px}
+.keyprog i{flex:1;height:8px;background:var(--line);border-radius:2px;transition:background .3s}
+.keyprog i.k{background:var(--acc)}
+.bytes{display:flex;flex-wrap:wrap;gap:3px;font-family:var(--mono);font-size:11.5px}
+.bytes .b{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:4px;padding:2px 3px;min-width:26px;background:#0b1017;cursor:default}
+.bytes .b span:nth-child(1){color:var(--dim)} .bytes .b span:nth-child(2){color:var(--amber)} .bytes .b span:nth-child(3){color:var(--acc);font-weight:700;white-space:pre}
+.bytes .b:hover{border-color:var(--acc)}
+
+/* DES */
+.battery{font-family:var(--mono);font-size:12.5px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.battery .bt{display:grid;grid-template-columns:150px 92px 64px 1fr;gap:10px;align-items:center;padding:4px 8px;border-radius:6px;border:1px solid transparent;transition:all .25s}
+.battery .bt .kk{color:var(--dim)}
+.battery .bt .ty{font-size:10.5px;color:var(--faint)}
+.battery .bt .pv{color:var(--faint);white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.battery .bt .mb{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.battery .bt .mb i{display:block;height:100%;width:0;background:var(--dim);transition:width .3s}
+.battery .bt.run{border-color:var(--line2);background:#0b1017}
+.battery .bt.hit{border-color:var(--acc);background:#0f2a20}
+.battery .bt.hit .pv,.battery .bt.hit .kk{color:var(--acc)}
+.battery .bt.hit .mb i{background:var(--acc)}
+@media(max-width:700px){.battery .bt{grid-template-columns:1fr auto 60px}.battery .bt .pv{grid-column:1/-1;font-size:11px}}
+.blocks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.blk{font-family:var(--mono);font-size:12px;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;background:#0b1017;transition:all .3s}
+.blk .bh{color:var(--dim);letter-spacing:.03em}
+.blk .bp{color:var(--faint);margin-top:4px;font-size:14px;white-space:pre;min-height:20px}
+.blk.done{border-color:var(--acc-d)} .blk.done .bp{color:var(--acc)}
+.blk.broken{border-color:var(--red);background:#1c0e13} .blk.broken .bp{color:var(--red)}
+.blk .bi{font-size:10px;color:var(--faint);float:right}
+.blk .byte{cursor:pointer;border-radius:3px;padding:0 1px}
+.blk .byte:hover{background:var(--line2);color:var(--ink)}
+.blk .byte.flip{background:var(--red);color:#1c0e13}
+.subk{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;margin:10px 0}
+.subk div{font-family:var(--mono);font-size:10px;text-align:center;padding:6px 0;border-radius:4px;border:1px solid var(--line2)}
+.subk .A{background:#123326;color:var(--acc);border-color:var(--acc-d)}
+.subk .B{background:#2a2110;color:var(--amber);border-color:#5a4520}
+.subk-l{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
+@media(max-width:640px){.subk{grid-template-columns:repeat(8,1fr)}}
+
+/* spoiler */
+.spoilers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+@media(max-width:640px){.spoilers{grid-template-columns:1fr}}
+.spoiler{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;cursor:pointer;position:relative}
+.spoiler .sn{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.12em}
+.spoiler .sv{filter:blur(6px);transition:filter .4s;font-size:14.5px;color:var(--text);user-select:none}
+.spoiler.open .sv{filter:none;user-select:text}
+
+/* fix cards */
+.fixes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}
+@media(max-width:700px){.fixes{grid-template-columns:1fr}}
+.fix{border:1px solid var(--line2);border-radius:12px;padding:16px 18px;background:var(--panel)}
+.fix .fh{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.fix .ft{font-family:var(--head);font-size:19px;font-weight:700;margin:4px 0 8px}
+.fix .bad,.fix .good{display:block;font-size:14.5px;padding-left:20px;position:relative;margin:6px 0;text-decoration:none}
+.fix .bad{color:#e7b3ba} .fix .good{color:#bfe9d6}
+.fix .bad::before{content:"✗";position:absolute;left:0;color:var(--red)}
+.fix .good::before{content:"✓";position:absolute;left:0;color:var(--acc)}
+
+footer{border-top:1px solid var(--line);margin-top:90px;padding:36px 0 70px;color:var(--faint);font-size:13.5px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+.tt-grid td.fill.sel{background:#1b3247;border-color:var(--blue);color:var(--ink)}
+</style>
+</head>
+<body>
+<!-- ============================ TOP BAR ============================ -->
+<div class="topbar" id="topbar">
+  <div class="tb-title"><b>~/bnd-challenge</b> <span data-de="· vier Rätsel, zwölf Jahre, vier Fallen" data-en="· four puzzles, twelve years, four traps">· vier Rätsel, zwölf Jahre, vier Fallen</span></div>
+  <nav class="leds" aria-label="Status">
+    <a href="#t1" data-led="1"><i></i>T1</a>
+    <a href="#t2" data-led="2"><i></i>T2</a>
+    <a href="#t3" data-led="3"><i></i>T3</a>
+    <a href="#t4" data-led="4"><i></i>T4</a>
+  </nav>
+  <div class="langswitch" role="group" aria-label="Sprache / language">
+    <button class="lb-de on" onclick="setLang('de')">DE</button><button class="lb-en" onclick="setLang('en')">EN</button>
+  </div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<!-- mascot SVGs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="botbase">
+      <rect x="4" y="10" width="36" height="30" rx="8" fill="#111823" stroke="#5cf2b0" stroke-width="1.5"/>
+      <line x1="22" y1="10" x2="22" y2="4" stroke="#5cf2b0" stroke-width="1.5"/>
+      <circle cx="22" cy="3" r="2.4" fill="#ffb547"/>
+      <rect x="1" y="20" width="3" height="9" rx="1.5" fill="#5cf2b0"/>
+      <rect x="40" y="20" width="3" height="9" rx="1.5" fill="#5cf2b0"/>
+    </g>
+    <g id="bot">
+      <use href="#botbase"/>
+      <circle cx="16" cy="23" r="4" fill="#5cf2b0"/><circle cx="28" cy="23" r="4" fill="#5cf2b0"/>
+      <text x="14.4" y="25.5" font-size="7" fill="#080b10" font-family="monospace" font-weight="bold">&gt;</text>
+      <text x="26.4" y="25.5" font-size="7" fill="#080b10" font-family="monospace" font-weight="bold">_</text>
+      <rect x="16" y="32" width="12" height="2.5" rx="1" fill="#ffb547"/>
+    </g>
+    <g id="bot-smug">
+      <use href="#botbase"/>
+      <path d="M12 24 q4 -4 8 0" stroke="#5cf2b0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M24 24 q4 -4 8 0" stroke="#5cf2b0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <path d="M15 32 q7 4 14 -1" stroke="#ffb547" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </g>
+    <g id="bot-wow">
+      <use href="#botbase"/>
+      <circle cx="16" cy="23" r="4.6" fill="none" stroke="#5cf2b0" stroke-width="2"/><circle cx="16" cy="23" r="1.6" fill="#5cf2b0"/>
+      <circle cx="28" cy="23" r="4.6" fill="none" stroke="#5cf2b0" stroke-width="2"/><circle cx="28" cy="23" r="1.6" fill="#5cf2b0"/>
+      <ellipse cx="22" cy="33.5" rx="3" ry="2.6" fill="#ffb547"/>
+    </g>
+    <g id="me">
+      <circle cx="22" cy="22" r="19" fill="#162030" stroke="#7cc4ff" stroke-width="1.5"/>
+      <rect x="10" y="16" width="10" height="7" rx="2.5" fill="none" stroke="#7cc4ff" stroke-width="1.6"/>
+      <rect x="24" y="16" width="10" height="7" rx="2.5" fill="none" stroke="#7cc4ff" stroke-width="1.6"/>
+      <line x1="20" y1="19" x2="24" y2="19" stroke="#7cc4ff" stroke-width="1.6"/>
+      <path d="M15 30 q7 5 14 0" stroke="#7cc4ff" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+
+<!-- ============================ HERO ============================ -->
+<header class="hero" id="top">
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <div class="langswitch" role="group" aria-label="Sprache / language">
+    <button class="lb-de on" onclick="setLang('de')">DE</button><button class="lb-en" onclick="setLang('en')">EN</button>
+  </div>
+  <div class="wrap">
+    <div class="kicker" data-de="Kryptanalyse · Cold Case · 2014 → 2026" data-en="Cryptanalysis · Cold Case · 2014 → 2026">Kryptanalyse · Cold Case · 2014 → 2026</div>
+    <h1><span data-de="Die BND-Krypto-Challenge:" data-en="The BND Crypto Challenge:">Die BND-Krypto-Challenge:</span>
+    <span class="glitch" id="glitch" data-de="vier Rätsel, zwölf Jahre, vier Fallen" data-en="four puzzles, twelve years, four traps">vier Rätsel, zwölf Jahre, vier Fallen</span></h1>
+    <p class="sub" data-de="Wie vier Geheimtexte des Bundesnachrichtendiensts aus dem Jahr 2014 schließlich doch noch geknackt wurden – inklusive aller Sackgassen. Mit echtem DES, echtem DEFLATE und einem echten Doppelwürfel, live in deinem Browser." data-en="How four ciphertexts published by Germany's foreign intelligence service in 2014 finally fell – including every dead end. With real DES, real DEFLATE and a real double transposition, running live in your browser.">Wie vier Geheimtexte des Bundesnachrichtendiensts aus dem Jahr 2014 schließlich doch noch geknackt wurden – inklusive aller Sackgassen. Mit echtem DES, echtem DEFLATE und einem echten Doppelwürfel, live in deinem Browser.</p>
+    <div class="meta">
+      <span data-de="Okt 2026" data-en="Oct 2026">Okt 2026</span>
+      <span data-de="Lesezeit ~20 min" data-en="~20 min read">Lesezeit ~20 min</span>
+      <span data-de="7 Playgrounds · 0 Dependencies" data-en="7 playgrounds · 0 dependencies">7 Playgrounds · 0 Dependencies</span>
+    </div>
+    <div class="dossiers">
+      <a class="dossier solved" href="#t1" data-dossier="1"><span class="stamp" data-de="GELÖST 2017" data-en="SOLVED 2017">GELÖST 2017</span><div class="dn">Text 1</div><div class="dl" data-de="95 Zeichen" data-en="95 letters">95 Zeichen</div><div class="dh">UELNW ETTHE CSTEN AGSEZ UCPRL INEIE DISSS CINRA DUAZN AETTC</div></a>
+      <a class="dossier" href="#t2" data-dossier="2"><span class="stamp" data-de="UNGELÖST" data-en="UNSOLVED" data-solved-de="GELÖST" data-solved-en="SOLVED">UNGELÖST</span><div class="dn">Text 2</div><div class="dl">76 Bytes</div><div class="dh" data-hexpreview="2"></div></a>
+      <a class="dossier" href="#t3" data-dossier="3"><span class="stamp" data-de="UNGELÖST" data-en="UNSOLVED" data-solved-de="GELÖST" data-solved-en="SOLVED">UNGELÖST</span><div class="dn">Text 3</div><div class="dl">159 Bytes</div><div class="dh" data-hexpreview="3"></div></a>
+      <a class="dossier" href="#t4" data-dossier="4"><span class="stamp" data-de="UNGELÖST" data-en="UNSOLVED" data-solved-de="GELÖST" data-solved-en="SOLVED">UNGELÖST</span><div class="dn">Text 4</div><div class="dl">56 Bytes</div><div class="dh" data-hexpreview="4"></div></a>
+    </div>
+    <div class="scrollhint"><i></i><span data-de="Scrollen – die Stempel ändern sich, sobald du die Lösung erreichst." data-en="Scroll – the stamps change once you reach each solution.">Scrollen – die Stempel ändern sich, sobald du die Lösung erreichst.</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============================ TL;DR ============================ -->
+<section id="tldr" style="padding-top:56px">
+<p data-html data-de="<b>Für Ungeduldige:</b> Hier sind alle vier Lösungen – hinter Milchglas. Klick drauf, wenn du wirklich gespoilert werden willst. Alle anderen: weiterlesen, es lohnt sich." data-en="<b>For the impatient:</b> here are all four solutions – behind frosted glass. Click if you really want to be spoiled. Everyone else: keep reading, it's worth it."><b>Für Ungeduldige:</b> Hier sind alle vier Lösungen – hinter Milchglas. Klick drauf, wenn du wirklich gespoilert werden willst. Alle anderen: weiterlesen, es lohnt sich.</p>
+<div class="spoilers">
+  <div class="spoiler" tabindex="0" role="button"><div class="sn">TEXT 1</div><div class="sv" data-de="Doppelwürfel mit GRUNDGESETZ + VERFASSUNG → Artikel 1 des Grundgesetzes" data-en="Double transposition with GRUNDGESETZ + VERFASSUNG → Article 1 of the German Basic Law">Doppelwürfel mit GRUNDGESETZ + VERFASSUNG → Artikel 1 des Grundgesetzes</div></div>
+  <div class="spoiler" tabindex="0" role="button"><div class="sn">TEXT 2</div><div class="sv" data-de="XOR mit einem 40-Byte-Zufallskey, der sich wiederholt → Karl-Valentin-Zitat" data-en="XOR with a 40-byte random key that repeats → Karl Valentin quote">XOR mit einem 40-Byte-Zufallskey, der sich wiederholt → Karl-Valentin-Zitat</div></div>
+  <div class="spoiler" tabindex="0" role="button"><div class="sn">TEXT 3</div><div class="sv" data-de="Gar keine Verschlüsselung: raw DEFLATE → BND-Leitbild" data-en="No encryption at all: raw DEFLATE → BND mission statement">Gar keine Verschlüsselung: raw DEFLATE → BND-Leitbild</div></div>
+  <div class="spoiler" tabindex="0" role="button"><div class="sn">TEXT 4</div><div class="sv" data-de="DES-ECB mit semi-schwachem Key 01 1F 01 1F 01 0E 01 0E → Chomsky" data-en="DES-ECB with semi-weak key 01 1F 01 1F 01 0E 01 0E → Chomsky">DES-ECB mit semi-schwachem Key 01 1F 01 1F 01 0E 01 0E → Chomsky</div></div>
+</div>
+</section>
+
+<!-- ============================ SECTION: SUCHE ============================ -->
+<section id="suche">
+<h2><span class="no">01</span><span data-de="Die Suche nach den alten Aufgaben" data-en="Hunting down the old puzzles">Die Suche nach den alten Aufgaben</span></h2>
+
+<p data-de="Anfang 2014 stand auf der Website des Bundesnachrichtendiensts eine Seite mit dem denkbar unspektakulären Titel „Kryptologie – Beispieltexte“. Vier Geheimtexte, eine Aufgabe: „Finden Sie zu den vier folgenden Geheimtexten die entsprechenden Klartexte sowie die verwendeten Verschlüsselungsverfahren und Schlüssel.“ Antwortvorschläge bitte an information@bundesnachrichtendienst.de. Ja, wirklich." data-en="In early 2014, the website of the Bundesnachrichtendienst – Germany's foreign intelligence service – carried a page with the gloriously unexciting title “Cryptology – sample texts”. Four ciphertexts, one task: “Find the corresponding plaintexts as well as the encryption methods and keys used.” Send your answers to information@bundesnachrichtendienst.de. Yes, really.">Anfang 2014 stand auf der Website des Bundesnachrichtendiensts eine Seite mit dem denkbar unspektakulären Titel „Kryptologie – Beispieltexte“. Vier Geheimtexte, eine Aufgabe: „Finden Sie zu den vier folgenden Geheimtexten die entsprechenden Klartexte sowie die verwendeten Verschlüsselungsverfahren und Schlüssel.“ Antwortvorschläge bitte an information@bundesnachrichtendienst.de. Ja, wirklich.</p>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot-smug"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Ein Geheimdienst, der Rätsel per Funktionspostfach annimmt. Ich liebe diesen Plot schon jetzt." data-en="An intelligence agency accepting puzzle solutions via a shared mailbox. I already love this plot.">Ein Geheimdienst, der Rätsel per Funktionspostfach annimmt. Ich liebe diesen Plot schon jetzt.</p>
+  <p data-de="Kleines Problem allerdings: Die Seite gibt's seit etwa 2018 nicht mehr. Der BND hat sie stillschweigend gelöscht – ohne je eine Lösung zu veröffentlichen. Vier Texte, offiziell für immer offen." data-en="Small problem, though: the page has been gone since around 2018. The BND quietly deleted it – without ever publishing solutions. Four texts, officially open forever.">Kleines Problem allerdings: Die Seite gibt's seit etwa 2018 nicht mehr. Der BND hat sie stillschweigend gelöscht – ohne je eine Lösung zu veröffentlichen. Vier Texte, offiziell für immer offen.</p></div>
+</div>
+
+<div class="dlg me">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#me"/></svg>
+  <div class="bub"><div class="who" data-de="Autor" data-en="Author">Autor</div>
+  <p data-de="Die Wayback Machine regelt. Die Snapshots von 2015 und 2016 haben die komplette Seite – alle vier Hex-Dumps, originalgetreu. Als Beifang fanden sich noch ältere BND-Challenges (2005, 2007, eine ZIP-Challenge, sogar eine Reversing-Aufgabe von 2016)." data-en="The Wayback Machine has us covered. The 2015 and 2016 snapshots contain the full page – all four hex dumps, byte-accurate. As bycatch we also dug up older BND challenges (2005, 2007, a ZIP challenge, even a 2016 reversing task).">Die Wayback Machine regelt. Die Snapshots von 2015 und 2016 haben die komplette Seite – alle vier Hex-Dumps, originalgetreu. Als Beifang fanden sich noch ältere BND-Challenges (2005, 2007, eine ZIP-Challenge, sogar eine Reversing-Aufgabe von 2016).</p></div>
+</div>
+
+<h3 data-de="Zeitleiste eines Cold Case" data-en="Timeline of a cold case">Zeitleiste eines Cold Case</h3>
+<div class="tl">
+  <div class="ev"><div class="when">2005 · 2007</div><div class="what" data-de="Der BND veröffentlicht schon früher Krypto-Rätsel – die Beispieltexte haben Vorgänger." data-en="The BND already publishes crypto puzzles earlier – the sample texts have predecessors.">Der BND veröffentlicht schon früher Krypto-Rätsel – die Beispieltexte haben Vorgänger.</div></div>
+  <div class="ev red"><div class="when" data-de="Feb 2014" data-en="Feb 2014">Feb 2014</div><div class="what" data-de="Klaus Schmeh stellt die vier „Beispieltexte“ auf seinem Krypto-Blog vor (Hinweis von Leser Jörg Drobick). 45 Kommentare später: kein einziges Rätsel gelöst." data-en="Klaus Schmeh presents the four “sample texts” on his crypto blog (tip from reader Jörg Drobick). 45 comments later: not a single puzzle solved.">Klaus Schmeh stellt die vier „Beispieltexte“ auf seinem Krypto-Blog vor (Hinweis von Leser Jörg Drobick). 45 Kommentare später: kein einziges Rätsel gelöst.</div></div>
+  <div class="ev"><div class="when">2015 · 2016</div><div class="what" data-de="Die Wayback Machine archiviert die Originalseite – unser byte-genauer Ankerpunkt." data-en="The Wayback Machine archives the original page – our byte-exact anchor.">Die Wayback Machine archiviert die Originalseite – unser byte-genauer Ankerpunkt.</div></div>
+  <div class="ev hot"><div class="when" data-de="10.–11. Dez 2017" data-en="Dec 10–11, 2017">10.–11. Dez 2017</div><div class="what" data-de="Schmeh greift die Rätsel erneut auf. Am nächsten Tag vermutet Leser Ralf Bülow den Klartext von Text 1, Leser Marc liefert noch am selben Tag die Schlüssel. Text 1: gelöst." data-en="Schmeh revisits the puzzles. The next day, reader Ralf Bülow guesses Text 1's plaintext, and reader Marc delivers the keys the very same day. Text 1: solved.">Schmeh greift die Rätsel erneut auf. Am nächsten Tag vermutet Leser Ralf Bülow den Klartext von Text 1, Leser Marc liefert noch am selben Tag die Schlüssel. Text 1: gelöst.</div></div>
+  <div class="ev red"><div class="when" data-de="~2018" data-en="~2018">~2018</div><div class="what" data-de="Die BND-Seite verschwindet. Ab jetzt kursieren die Texte nur noch als Abschriften." data-en="The BND page disappears. From now on the texts only circulate as transcriptions.">Die BND-Seite verschwindet. Ab jetzt kursieren die Texte nur noch als Abschriften.</div></div>
+  <div class="ev red"><div class="when" data-de="Aug 2021" data-en="Aug 2021">Aug 2021</div><div class="what" data-de="„Ein kryptologischer Cold Case“: Schmeh listet die drei offenen Texte als Hex-Abschrift – mit einem fatalen Tippfehler." data-en="“A cryptological cold case”: Schmeh lists the three open texts as a hex transcription – with one fatal typo.">„Ein kryptologischer Cold Case“: Schmeh listet die drei offenen Texte als Hex-Abschrift – mit einem fatalen Tippfehler.</div></div>
+  <div class="ev hot"><div class="when">2026</div><div class="what" data-de="Text 3, Text 2 und Text 4 fallen – in genau dieser Reihenfolge. Und so geht's weiter in diesem Post." data-en="Text 3, Text 2 and Text 4 fall – in exactly that order. Which is also the order of this post.">Text 3, Text 2 und Text 4 fallen – in genau dieser Reihenfolge. Und so geht's weiter in diesem Post.</div></div>
+</div>
+
+<p data-de="Wichtigster Fund neben den Texten selbst: der Original-Hinweis des BND – „Die Klartexte zu den ersten drei Texten sind in deutscher Sprache abgefasst, der vierte Klartext in (amerikanischem) Englisch.“ Merk dir das. Es wird bei jedem einzelnen Text wichtig." data-en="The most valuable find besides the texts themselves: the BND's original hint – “The plaintexts of the first three texts are in German, the fourth is in (American) English.” Remember this. It matters for every single text.">Wichtigster Fund neben den Texten selbst: der Original-Hinweis des BND – „Die Klartexte zu den ersten drei Texten sind in deutscher Sprache abgefasst, der vierte Klartext in (amerikanischem) Englisch.“ Merk dir das. Es wird bei jedem einzelnen Text wichtig.</p>
+
+<div class="tblwrap"><table>
+<tr><th>Text</th><th data-de="Länge" data-en="Length">Länge</th><th data-de="Sprache (laut BND)" data-en="Language (per BND)">Sprache (laut BND)</th><th data-de="Status bis 2026" data-en="Status until 2026">Status bis 2026</th></tr>
+<tr><td class="mono">Text 1</td><td class="mono" data-de="95 Zeichen" data-en="95 letters">95 Zeichen</td><td data-de="Deutsch" data-en="German">Deutsch</td><td><span class="pill ok" data-de="gelöst Dez 2017 (Blog-Leser)" data-en="solved Dec 2017 (blog readers)">gelöst Dez 2017 (Blog-Leser)</span></td></tr>
+<tr><td class="mono">Text 2</td><td class="mono">76 Bytes</td><td data-de="Deutsch" data-en="German">Deutsch</td><td><span class="pill am" data-de="ungelöst" data-en="unsolved">ungelöst</span></td></tr>
+<tr><td class="mono">Text 3</td><td class="mono">159 Bytes</td><td data-de="Deutsch" data-en="German">Deutsch</td><td><span class="pill am" data-de="ungelöst" data-en="unsolved">ungelöst</span></td></tr>
+<tr><td class="mono">Text 4</td><td class="mono">56 Bytes</td><td data-de="Englisch (US)" data-en="English (US)">Englisch (US)</td><td><span class="pill am" data-de="ungelöst" data-en="unsolved">ungelöst</span></td></tr>
+</table></div>
+</section>
+
+<!-- ============================ SECTION: KOPIE ============================ -->
+<section id="kopie">
+<h2><span class="no">02</span><span data-de="Der Fehler in der Kopie" data-en="The error in the copy">Der Fehler in der Kopie</span></h2>
+
+<p data-de="Nachdem der BND die Seite gelöscht hatte, zirkulierten die Texte nur noch über Zweitquellen – allen voran Klaus Schmehs Krypto-Blog (Cipherbrain/Scienceblogs). Und dort lauerte eine Falle, die niemand bemerkt hatte: In der Hex-Abschrift von Text 4 war ein einziges Byte falsch abgetippt." data-en="After the BND removed the page, the texts only circulated via secondary sources – first and foremost Klaus Schmeh's crypto blog (Cipherbrain/Scienceblogs). And there lurked a trap nobody had noticed: in the hex transcription of Text 4, a single byte had been mistyped.">Nachdem der BND die Seite gelöscht hatte, zirkulierten die Texte nur noch über Zweitquellen – allen voran Klaus Schmehs Krypto-Blog (Cipherbrain/Scienceblogs). Und dort lauerte eine Falle, die niemand bemerkt hatte: In der Hex-Abschrift von Text 4 war ein einziges Byte falsch abgetippt.</p>
+
+<pre><span data-de="Text 4, Zeile 3:" data-en="Text 4, line 3:">Text 4, Zeile 3:</span>
+<span data-de="BND-Original (Wayback 2016):" data-en="BND original (Wayback 2016):">BND-Original (Wayback 2016):</span>  FE C6 29 7F 74 F7 <span class="ok">2B</span> 86
+<span data-de="Schmeh-Abschrift (2021):    " data-en="Schmeh transcript (2021):   ">Schmeh-Abschrift (2021):    </span>  FE C6 29 7F 74 F7 <span class="bad">28</span> 86</pre>
+
+<div class="callout warn"><div class="t" data-de="Warum das tödlich ist" data-en="Why this is deadly">Warum das tödlich ist</div>
+<span data-de="0x2B gegen 0x28 – das sind genau zwei gekippte Bits. In einem Blockchiffrat reicht das, um einen kompletten 8-Byte-Klartextblock in Zufallsrauschen zu verwandeln (Lawineneffekt), und es vergiftet zusätzlich jede statistische Analyse. Wer mit der falschen Kopie arbeitete, wäre an Text 4 gescheitert, ohne je zu erfahren, warum. Erst der Abgleich mit dem Wayback-Original rettete die Analyse." data-en="0x2B versus 0x28 – that's exactly two flipped bits. In a block ciphertext, that's enough to turn an entire 8-byte plaintext block into random noise (avalanche effect), and it poisons every statistical analysis on top. Anyone working from the wrong copy would have failed on Text 4 without ever learning why. Only the cross-check against the Wayback original saved the analysis.">0x2B gegen 0x28 – das sind genau zwei gekippte Bits. In einem Blockchiffrat reicht das, um einen kompletten 8-Byte-Klartextblock in Zufallsrauschen zu verwandeln (Lawineneffekt), und es vergiftet zusätzlich jede statistische Analyse. Wer mit der falschen Kopie arbeitete, wäre an Text 4 gescheitert, ohne je zu erfahren, warum. Erst der Abgleich mit dem Wayback-Original rettete die Analyse.</span></div>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Lektion null der Kryptanalyse: Verifiziere deinen Ciphertext, bevor du ihn knackst. Der Gegner war nicht der BND – es waren die Tippfehler des Internets." data-en="Cryptanalysis lesson zero: verify your ciphertext before you crack it. The adversary wasn't the BND – it was the internet's typos.">Lektion null der Kryptanalyse: Verifiziere deinen Ciphertext, bevor du ihn knackst. Der Gegner war nicht der BND – es waren die Tippfehler des Internets.</p>
+  <p data-de="Merk dir Byte 0x28. In Abschnitt 06 darfst du ihn selbst einbauen und zusehen, wie genau ein DES-Block explodiert." data-en="Remember byte 0x28. In section 06 you get to plant it yourself and watch exactly one DES block explode.">Merk dir Byte 0x28. In Abschnitt 06 darfst du ihn selbst einbauen und zusehen, wie genau ein DES-Block explodiert.</p></div>
+</div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ SECTION: TEXT 1 ============================ -->
+<section id="t1" data-solve="1">
+<h2><span class="no">03</span><span data-de="Text 1 – der Doppelwürfel" data-en="Text 1 – the double transposition">Text 1 – der Doppelwürfel</span></h2>
+
+<p data-de="Text 1 war der einzige, der vor 2026 schon gefallen war – und zwar in Rekordzeit. So sah er aus, 95 Großbuchstaben in Fünfergruppen, ganz wie zu Zeiten des Kalten Kriegs:" data-en="Text 1 was the only one that had already fallen before 2026 – and in record time. This is what it looked like: 95 capital letters in groups of five, just like in Cold War days:">Text 1 war der einzige, der vor 2026 schon gefallen war – und zwar in Rekordzeit. So sah er aus, 95 Großbuchstaben in Fünfergruppen, ganz wie zu Zeiten des Kalten Kriegs:</p>
+
+<div class="tapebox" id="t1ct"></div>
+
+<p data-de="Am 10. Dezember 2017 stellte Klaus Schmeh die Rätsel erneut vor. Am nächsten Morgen bemerkte Leser Ralf Bülow etwas Entscheidendes: Die Buchstabenhäufigkeiten sind exakt die des Deutschen – und der Text enthält genau dieselben Buchstaben wie die ersten beiden Sätze des Grundgesetzes. Noch am selben Tag lieferte Leser Marc das Verfahren und die Schlüssel: Doppelwürfel, GRUNDGESETZ und VERFASSUNG. Wer einen deutschen Geheimdienst kennt, ahnt, wohin das führt:" data-en="On December 10, 2017, Klaus Schmeh presented the puzzles again. The next morning, reader Ralf Bülow noticed something crucial: the letter frequencies are exactly those of German – and the text contains precisely the same letters as the first two sentences of the German Basic Law. The very same day, reader Marc delivered the method and the keys: double transposition, GRUNDGESETZ (“Basic Law”) and VERFASSUNG (“constitution”). Knowing German intelligence, you can guess where this is heading:">Am 10. Dezember 2017 stellte Klaus Schmeh die Rätsel erneut vor. Am nächsten Morgen bemerkte Leser Ralf Bülow etwas Entscheidendes: Die Buchstabenhäufigkeiten sind exakt die des Deutschen – und der Text enthält genau dieselben Buchstaben wie die ersten beiden Sätze des Grundgesetzes. Noch am selben Tag lieferte Leser Marc das Verfahren und die Schlüssel: Doppelwürfel, GRUNDGESETZ und VERFASSUNG. Wer einen deutschen Geheimdienst kennt, ahnt, wohin das führt:</p>
+
+<div class="callout"><div class="t" data-de="Klartext" data-en="Plaintext">Klartext</div>
+<span class="mono" data-de="„Die Würde des Menschen ist unantastbar. Sie zu achten und zu schützen ist Verpflichtung aller staatlichen Gewalt.“ – Art. 1 Abs. 1 Grundgesetz" data-en="“Human dignity shall be inviolable. To respect and protect it shall be the duty of all state authority.” – Article 1(1), German Basic Law">„Die Würde des Menschen ist unantastbar. Sie zu achten und zu schützen ist Verpflichtung aller staatlichen Gewalt.“ – Art. 1 Abs. 1 Grundgesetz</span></div>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Warum konnte Ralf das einfach so sehen? Weil eine Transposition Buchstaben nur umstellt, nie ersetzt. Ein Transpositionschiffrat ist ein Anagramm mit Methode – die Häufigkeitsverteilung bleibt 1:1 erhalten. Wer den Klartext errät, hat den Inhalt schon, bevor er den Schlüssel kennt." data-en="Why could Ralf just see it? Because a transposition only rearranges letters, it never substitutes them. A transposition ciphertext is an anagram with a method – the frequency distribution survives 1:1. Guess the plaintext and you have the content before you ever know the key.">Warum konnte Ralf das einfach so sehen? Weil eine Transposition Buchstaben nur umstellt, nie ersetzt. Ein Transpositionschiffrat ist ein Anagramm mit Methode – die Häufigkeitsverteilung bleibt 1:1 erhalten. Wer den Klartext errät, hat den Inhalt schon, bevor er den Schlüssel kennt.</p></div>
+</div>
+
+<p data-de="Der Doppelwürfel ist eine zweifache Spaltentransposition: Der Klartext wird zeilenweise in ein Raster geschrieben, dessen Breite das Schlüsselwort bestimmt. Dann werden die Spalten in alphabetischer Reihenfolge der Schlüsselbuchstaben ausgelesen (bei gleichen Buchstaben von links nach rechts) – und das Ganze mit einem zweiten Schlüsselwort nochmal. Erst mal im Kleinen:" data-en="The double transposition writes the plaintext row by row into a grid whose width is set by a keyword. Then the columns are read out in the alphabetical order of the key letters (equal letters left to right) – and the whole thing is done again with a second keyword. First, a tiny version:">Der Doppelwürfel ist eine zweifache Spaltentransposition: Der Klartext wird zeilenweise in ein Raster geschrieben, dessen Breite das Schlüsselwort bestimmt. Dann werden die Spalten in alphabetischer Reihenfolge der Schlüsselbuchstaben ausgelesen (bei gleichen Buchstaben von links nach rechts) – und das Ganze mit einem zweiten Schlüsselwort nochmal. Erst mal im Kleinen:</p>
+
+<div class="play" id="pw1">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · Spaltentransposition zum Anfassen" data-en="Playground · columnar transposition, hands-on">Playground · Spaltentransposition zum Anfassen</span><span class="pcount"></span></div>
+  <div class="pbody">
+  <div class="stage">
+    <div class="pstep on">
+      <p class="small" data-de="Miniatur: Klartext GEHEIMTREFF (11 Zeichen), Schlüsselwort BND (3 Spalten). Schritt 1: zeilenweise einschreiben." data-en="Miniature: plaintext GEHEIMTREFF (11 letters), keyword BND (3 columns). Step 1: write it in row by row.">Miniatur: Klartext GEHEIMTREFF (11 Zeichen), Schlüsselwort BND (3 Spalten). Schritt 1: zeilenweise einschreiben.</p>
+      <div id="tt1grid"></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Schritt 2: Die kleinen Zahlen sind die Rangfolge der Schlüsselbuchstaben: B(1), N(3), D(2). Gelesen wird also Spalte B, dann D, dann N – jede von oben nach unten." data-en="Step 2: the small numbers are the alphabetical ranks of the key letters: B(1), N(3), D(2). So we read column B, then D, then N – each top to bottom.">Schritt 2: Die kleinen Zahlen sind die Rangfolge der Schlüsselbuchstaben: B(1), N(3), D(2). Gelesen wird also Spalte B, dann D, dann N – jede von oben nach unten.</p>
+      <div id="tt1grid2"></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Schritt 3: spaltenweise ausgelesen ergibt das Chiffrat. Jetzt stell dir vor, das Ergebnis wandert noch einmal durch ein zweites Raster mit einem zweiten Wort – das ist der Doppelwürfel. Entschlüsseln heißt: rückwärts rechnen, zweimal." data-en="Step 3: reading column by column yields the ciphertext. Now imagine feeding the result through a second grid with a second keyword – that's the double transposition. Decrypting means running it backwards, twice.">Schritt 3: spaltenweise ausgelesen ergibt das Chiffrat. Jetzt stell dir vor, das Ergebnis wandert noch einmal durch ein zweites Raster mit einem zweiten Wort – das ist der Doppelwürfel. Entschlüsseln heißt: rückwärts rechnen, zweimal.</p>
+      <div class="result"><span class="lbl" data-de="Chiffrat" data-en="Ciphertext">Chiffrat</span><span id="tt1out"></span></div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="step" data-de="Weiter →" data-en="Next →" onclick="stepper('pw1',this)">Weiter →</button>
+    <button class="ghost" data-de="↺ Reset" data-en="↺ Reset" onclick="stepper('pw1',this,true)">↺ Reset</button>
+    <div class="dots" id="pw1dots"></div>
+  </div>
+  </div>
+</div>
+
+<p data-de="Und jetzt das Original. Beim Verschlüsseln kam GRUNDGESETZ zuerst und VERFASSUNG danach – zum Entschlüsseln drehen wir die Reihenfolge um. Der folgende Playground rechnet mit den echten 95 Zeichen; nichts ist vorberechnet." data-en="And now the real thing. Encryption used GRUNDGESETZ first and VERFASSUNG second – so to decrypt, we reverse the order. The next playground works on the real 95 letters; nothing is precomputed.">Und jetzt das Original. Beim Verschlüsseln kam GRUNDGESETZ zuerst und VERFASSUNG danach – zum Entschlüsseln drehen wir die Reihenfolge um. Der folgende Playground rechnet mit den echten 95 Zeichen; nichts ist vorberechnet.</p>
+
+<div class="play" id="pw1b">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · der echte Doppelwürfel, rückwärts" data-en="Playground · the real double transposition, in reverse">Playground · der echte Doppelwürfel, rückwärts</span><span class="pcount"></span></div>
+  <div class="pbody">
+  <div class="tapebox" id="dwTape"></div>
+  <div class="stage">
+    <div class="pstep on">
+      <p class="small" data-de="Runde 1 von 2 – Schlüssel VERFASSUNG (10 Spalten). 95 = 9 × 10 + 5: Die ersten fünf Spalten sind 10 Zeichen hoch, die anderen nur 9. Das Chiffrat wird spaltenweise in Rangfolge eingefüllt – A(1) zuerst, V(10) zuletzt." data-en="Round 1 of 2 – key VERFASSUNG (10 columns). 95 = 9 × 10 + 5: the first five columns are 10 letters tall, the rest only 9. The ciphertext is poured in column by column in rank order – A(1) first, V(10) last.">Runde 1 von 2 – Schlüssel VERFASSUNG (10 Spalten). 95 = 9 × 10 + 5: Die ersten fünf Spalten sind 10 Zeichen hoch, die anderen nur 9. Das Chiffrat wird spaltenweise in Rangfolge eingefüllt – A(1) zuerst, V(10) zuletzt.</p>
+      <div class="scrollx" id="dwGrid1"></div>
+      <div class="result neutral"><span class="lbl" data-de="Zeilenweise gelesen = Zwischentext" data-en="Read row by row = intermediate text">Zeilenweise gelesen = Zwischentext</span><span id="dwMid" class="am"></span></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Runde 2 von 2 – Schlüssel GRUNDGESETZ (11 Spalten, 95 = 8 × 11 + 7). Derselbe Trick mit dem Zwischentext. Achte auf die doppelten Buchstaben: G, E und noch ein E – gleiche Buchstaben werden von links nach rechts nummeriert." data-en="Round 2 of 2 – key GRUNDGESETZ (11 columns, 95 = 8 × 11 + 7). Same trick, applied to the intermediate text. Watch the repeated letters: G, E and another E – equal letters are numbered left to right.">Runde 2 von 2 – Schlüssel GRUNDGESETZ (11 Spalten, 95 = 8 × 11 + 7). Derselbe Trick mit dem Zwischentext. Achte auf die doppelten Buchstaben: G, E und noch ein E – gleiche Buchstaben werden von links nach rechts nummeriert.</p>
+      <div class="scrollx" id="dwGrid2"></div>
+      <div class="result"><span class="lbl" data-de="Zeilenweise gelesen = Klartext" data-en="Read row by row = plaintext">Zeilenweise gelesen = Klartext</span><span id="dwPt"></span></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Schlüssel-Labor: Ändere einen einzigen Buchstaben oder vertausche die Schlüssel – und sieh zu, wie das Grundgesetz zu Buchstabensalat wird. (Der Doppelwürfel ist bei langen, zufälligen Schlüsseln ernsthaft stark. Bei Schlüsselwörtern, die thematisch zum Klartext passen, eher nicht.)" data-en="Key lab: change a single letter or swap the keys – and watch the Basic Law turn into alphabet soup. (The double transposition is seriously strong with long random keys. With keywords that match the plaintext's topic, not so much.)">Schlüssel-Labor: Ändere einen einzigen Buchstaben oder vertausche die Schlüssel – und sieh zu, wie das Grundgesetz zu Buchstabensalat wird. (Der Doppelwürfel ist bei langen, zufälligen Schlüsseln ernsthaft stark. Bei Schlüsselwörtern, die thematisch zum Klartext passen, eher nicht.)</p>
+      <div class="row">
+        <label class="kv"><span data-de="Runde 1:" data-en="round 1:">Runde 1:</span> <input type="text" id="dwK1" value="VERFASSUNG" size="13" spellcheck="false" autocomplete="off"></label>
+        <label class="kv"><span data-de="Runde 2:" data-en="round 2:">Runde 2:</span> <input type="text" id="dwK2" value="GRUNDGESETZ" size="13" spellcheck="false" autocomplete="off"></label>
+        <button class="ghost" id="dwSwap" data-de="⇄ vertauschen" data-en="⇄ swap">⇄ vertauschen</button>
+      </div>
+      <div class="result" id="dwLabOut"><span class="lbl" data-de="Ergebnis" data-en="Result">Ergebnis</span><span id="dwLab"></span></div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="step" data-de="Weiter →" data-en="Next →" onclick="stepper('pw1b',this)">Weiter →</button>
+    <button class="ghost" data-de="▶ Animation wiederholen" data-en="▶ replay animation" onclick="dwReplay()">▶ Animation wiederholen</button>
+    <button class="ghost" data-de="↺ Reset" data-en="↺ Reset" onclick="stepper('pw1b',this,true)">↺ Reset</button>
+    <div class="dots" id="pw1bdots"></div>
+  </div>
+  </div>
+</div>
+
+<div class="callout amber"><div class="t" data-de="Warum der Doppelwürfel fiel" data-en="Why the double transposition fell">Warum der Doppelwürfel fiel</div>
+<span data-de="Nicht wegen Mathematik, sondern wegen Psychologie: berühmter Klartext, thematisch passende Schlüssel. Ein deutscher Geheimdienst verschlüsselt das Grundgesetz mit den Wörtern GRUNDGESETZ und VERFASSUNG – das ist ungefähr so, als würde man den Tresor mit der Kombination 1-2-3-4 sichern und ein Schild „Tresor“ dranhängen." data-en="Not because of mathematics, but psychology: a famous plaintext, keys that match its topic. A German intelligence agency encrypts the Basic Law using the words GRUNDGESETZ and VERFASSUNG – roughly like securing a safe with the combination 1-2-3-4 and putting a sign on it that says “safe”.">Nicht wegen Mathematik, sondern wegen Psychologie: berühmter Klartext, thematisch passende Schlüssel. Ein deutscher Geheimdienst verschlüsselt das Grundgesetz mit den Wörtern GRUNDGESETZ und VERFASSUNG – das ist ungefähr so, als würde man den Tresor mit der Kombination 1-2-3-4 sichern und ein Schild „Tresor“ dranhängen.</span></div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ SECTION: TEXT 3 ============================ -->
+<section id="t3" data-solve="3">
+<h2><span class="no">04</span><span data-de="Text 3 – die Entropie-Falle" data-en="Text 3 – the entropy trap">Text 3 – die Entropie-Falle</span></h2>
+
+<p data-de="Text 3 fiel 2026 als Erster der drei offenen – und die Lösung war eine Demütigung für alle, die ihn zwölf Jahre lang als Chiffrat behandelt hatten. Die Statistik schrie „Verschlüsselung“: Entropie 6,73 bit/Byte, Koinzidenzindex auf Zufallsniveau, 116 verschiedene Byte-Werte, keine Periode." data-en="Text 3 was the first of the three open ones to fall in 2026 – and its solution was a humiliation for everyone who had treated it as a cipher for twelve years. The statistics screamed “encryption”: 6.73 bits/byte of entropy, chance-level index of coincidence, 116 distinct byte values, no period.">Text 3 fiel 2026 als Erster der drei offenen – und die Lösung war eine Demütigung für alle, die ihn zwölf Jahre lang als Chiffrat behandelt hatten. Die Statistik schrie „Verschlüsselung“: Entropie 6,73 bit/Byte, Koinzidenzindex auf Zufallsniveau, 116 verschiedene Byte-Werte, keine Periode.</p>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Ich habe mitgezählt. Getestet wurden: XOR-Vigenère, Running Key, RC4 mit Wörterbuch („Pullach“, „VERFASSUNG“ …), PRNG-Streams (2³² Seeds in C gebrute-forced), AES/DES-Strommodi, Hill-Chiffre (159 = 3 · 53, wie verlockend!), Autokey, Bit-Transposition, LFSR, Baudot. Alles negativ. Alles." data-en="I kept count. Tested: XOR-Vigenère, running key, RC4 with a dictionary (“Pullach”, “VERFASSUNG” …), PRNG streams (2³² seeds brute-forced in C), AES/DES stream modes, Hill cipher (159 = 3 · 53, so tempting!), autokey, bit transposition, LFSR, Baudot. All negative. All of them.">Ich habe mitgezählt. Getestet wurden: XOR-Vigenère, Running Key, RC4 mit Wörterbuch („Pullach“, „VERFASSUNG“ …), PRNG-Streams (2³² Seeds in C gebrute-forced), AES/DES-Strommodi, Hill-Chiffre (159 = 3 · 53, wie verlockend!), Autokey, Bit-Transposition, LFSR, Baudot. Alles negativ. Alles.</p></div>
+</div>
+
+<div class="dlg me">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#me"/></svg>
+  <div class="bub"><div class="who" data-de="Autor" data-en="Author">Autor</div>
+  <p data-de="Und dann testete jemand die langweiligste Hypothese überhaupt: Was, wenn das gar keine Verschlüsselung ist, sondern nur … komprimierte Daten? Ein zlib-Aufruf später:" data-en="And then someone tested the most boring hypothesis of all: what if it isn't encryption at all, but just … compressed data? One zlib call later:">Und dann testete jemand die langweiligste Hypothese überhaupt: Was, wenn das gar keine Verschlüsselung ist, sondern nur … komprimierte Daten? Ein zlib-Aufruf später:</p></div>
+</div>
+
+<pre><span class="k">import</span> zlib
+zlib.decompress(open(<span class="s">'ct3.bin'</span>,<span class="s">'rb'</span>).read(), -15)
+<span class="c" data-de="# -15 = raw DEFLATE: kein zlib-Header (78 9C), kein gzip-Header (1F 8B), RFC 1951" data-en="# -15 = raw DEFLATE: no zlib header (78 9C), no gzip header (1F 8B), RFC 1951"># -15 = raw DEFLATE: kein zlib-Header (78 9C), kein gzip-Header (1F 8B), RFC 1951</span></pre>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot-wow"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Moment. Das heißt, zwölf Jahre lang hat niemand einfach mal … entpackt?" data-en="Wait. So for twelve years, nobody just tried to … unzip it?">Moment. Das heißt, zwölf Jahre lang hat niemand einfach mal … entpackt?</p></div>
+</div>
+<div class="dlg me">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#me"/></svg>
+  <div class="bub"><div class="who" data-de="Autor" data-en="Author">Autor</div>
+  <p data-de="Fairerweise: Raw DEFLATE hat kein Magic Byte. Kein „PK“, kein 1F 8B, nichts, woran ein Tool wie file anschlagen würde. Es sieht aus wie Rauschen, weil gute Kompression nun mal Redundanz entfernt – genau wie gute Verschlüsselung. Sieh selbst:" data-en="To be fair: raw DEFLATE has no magic bytes. No “PK”, no 1F 8B, nothing a tool like file would ever flag. It looks like noise because good compression removes redundancy – exactly like good encryption does. See for yourself:">Fairerweise: Raw DEFLATE hat kein Magic Byte. Kein „PK“, kein 1F 8B, nichts, woran ein Tool wie file anschlagen würde. Es sieht aus wie Rauschen, weil gute Kompression nun mal Redundanz entfernt – genau wie gute Verschlüsselung. Sieh selbst:</p></div>
+</div>
+
+<div class="play" id="pw3">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · Entropie ≠ Verschlüsselung" data-en="Playground · entropy ≠ encryption">Playground · Entropie ≠ Verschlüsselung</span><span class="pcount"></span></div>
+  <div class="pbody">
+  <div class="stage">
+    <div class="pstep on">
+      <p class="small" data-de="Alle 159 Bytes von Text 3 (High-Bit-Bytes ≥ 0x80 hervorgehoben) und drei Byte-Histogramme im Vergleich: deutscher Klartext, Text 3 und echte Zufallsbytes aus crypto.getRandomValues(). Bei nur 159 Bytes liegt das theoretische Maximum bei log₂ 159 ≈ 7,31 bit/Byte." data-en="All 159 bytes of Text 3 (high-bit bytes ≥ 0x80 highlighted) and three byte histograms side by side: German plaintext, Text 3, and genuine random bytes from crypto.getRandomValues(). With only 159 bytes, the theoretical maximum is log₂ 159 ≈ 7.31 bits/byte.">Alle 159 Bytes von Text 3 (High-Bit-Bytes ≥ 0x80 hervorgehoben) und drei Byte-Histogramme im Vergleich: deutscher Klartext, Text 3 und echte Zufallsbytes aus crypto.getRandomValues(). Bei nur 159 Bytes liegt das theoretische Maximum bei log₂ 159 ≈ 7,31 bit/Byte.</p>
+      <div class="hex" id="t3hex"></div>
+      <div class="hists">
+        <div class="hist"><div class="hn" data-de="deutscher Klartext" data-en="German plaintext">deutscher Klartext</div><div class="hv bl" id="h1v"></div><canvas id="h1"></canvas><div class="meter"><i id="h1m" style="background:var(--blue)"></i></div></div>
+        <div class="hist"><div class="hn">Text 3</div><div class="hv am" id="h2v"></div><canvas id="h2"></canvas><div class="meter"><i id="h2m" style="background:var(--amber)"></i></div></div>
+        <div class="hist"><div class="hn" data-de="Zufall (159 Bytes)" data-en="random (159 bytes)">Zufall (159 Bytes)</div><div class="hv rd" id="h3v"></div><canvas id="h3"></canvas><div class="meter"><i id="h3m" style="background:var(--red)"></i></div></div>
+      </div>
+      <div class="row"><button class="ghost" onclick="rerollRandom()" data-de="↻ neue Zufallsbytes" data-en="↻ new random bytes">↻ neue Zufallsbytes</button><span class="kv" data-de="bit/Byte (Shannon-Entropie der Byte-Verteilung)" data-en="bits/byte (Shannon entropy of the byte distribution)">bit/Byte (Shannon-Entropie der Byte-Verteilung)</span></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="DEFLATE liest Bits von LSB nach MSB. Die ersten 17 Bits sind der Blockheader – und sie verraten alles: BFINAL=1 (letzter Block), BTYPE=2 (dynamische Huffman-Codes), dazu die Größen der Code-Tabellen. Live aus den Bytes geparst:" data-en="DEFLATE reads bits from LSB to MSB. The first 17 bits are the block header – and they give everything away: BFINAL=1 (last block), BTYPE=2 (dynamic Huffman codes), plus the sizes of the code tables. Parsed live from the bytes:">DEFLATE liest Bits von LSB nach MSB. Die ersten 17 Bits sind der Blockheader – und sie verraten alles: BFINAL=1 (letzter Block), BTYPE=2 (dynamische Huffman-Codes), dazu die Größen der Code-Tabellen. Live aus den Bytes geparst:</p>
+      <div class="bits" id="t3bits"></div>
+      <p class="small" id="t3hdrnote" data-de="" data-en=""></p>
+      <button class="step" onclick="inflate3(this)" data-de="Dekomprimieren" data-en="Decompress">Dekomprimieren</button>
+      <div class="result" id="t3out" style="display:none"><span class="lbl" id="t3lbl"></span><span id="t3txt"></span></div>
+      <p class="small dim" id="t3check" style="display:none"></p>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Unter der Haube: LZ77. Gelb markierte Stellen sind keine gespeicherten Zeichen, sondern Rückverweise – „kopiere n Bytes von d Positionen weiter vorne“. Fahr mit der Maus drüber (oder tippe), um die Quelle zu sehen." data-en="Under the hood: LZ77. Highlighted spans aren't stored characters but back-references – “copy n bytes from d positions back”. Hover (or tap) to see the source.">Unter der Haube: LZ77. Gelb markierte Stellen sind keine gespeicherten Zeichen, sondern Rückverweise – „kopiere n Bytes von d Positionen weiter vorne“. Fahr mit der Maus drüber (oder tippe), um die Quelle zu sehen.</p>
+      <div class="lz" id="t3lz"></div>
+      <div class="kv" id="t3lzinfo" style="margin-top:8px">&nbsp;</div>
+      <p class="small dim" id="t3lzstat"></p>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Der Klartext ist ein Leitbild-Satz des BND selbst. Ein „Schlüssel“ existiert schlicht nicht – die einzigen „Schlüsseldaten“ sind die Huffman-Tabellen, und die stehen im Strom selbst. Verifikation: Erneute Kompression mit zlib Level 6, wbits=-15 liefert byteidentisch denselben 159-Byte-Strom. Kein Zweifel möglich." data-en="The plaintext is the BND's own mission statement. A “key” simply doesn't exist – the only “key material” are the Huffman tables, and they live inside the stream itself. Verification: re-compressing with zlib level 6, wbits=-15 reproduces the exact same 159-byte stream. No room for doubt.">Der Klartext ist ein Leitbild-Satz des BND selbst. Ein „Schlüssel“ existiert schlicht nicht – die einzigen „Schlüsseldaten“ sind die Huffman-Tabellen, und die stehen im Strom selbst. Verifikation: Erneute Kompression mit zlib Level 6, wbits=-15 liefert byteidentisch denselben 159-Byte-Strom. Kein Zweifel möglich.</p>
+      <div class="bigq" style="font-size:18px" data-de="„Ein Auslandsnachrichtendienst, der durch die herausragende Qualität seiner Arbeit und die Integrität seiner Mitarbeiter/-innen einen unverzichtbaren Beitrag für die Sicherheit der Bundesrepublik Deutschland und ihrer Bürger leistet.“" data-en="“A foreign intelligence service that, through the outstanding quality of its work and the integrity of its staff, makes an indispensable contribution to the security of the Federal Republic of Germany and its citizens.” (original German, translated)">„Ein Auslandsnachrichtendienst, der durch die herausragende Qualität seiner Arbeit und die Integrität seiner Mitarbeiter/-innen einen unverzichtbaren Beitrag für die Sicherheit der Bundesrepublik Deutschland und ihrer Bürger leistet.“</div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="step" data-de="Weiter →" data-en="Next →" onclick="stepper('pw3',this)">Weiter →</button>
+    <button class="ghost" data-de="↺ Reset" data-en="↺ Reset" onclick="stepper('pw3',this,true)">↺ Reset</button>
+    <div class="dots" id="pw3dots"></div>
+  </div>
+  </div>
+</div>
+
+<div class="callout amber"><div class="t" data-de="Warum das zwölf Jahre ungelöst blieb" data-en="Why this stayed unsolved for twelve years">Warum das zwölf Jahre ungelöst blieb</div>
+<span data-de="Die Aufgabenstellung selbst war die Falle: „Finden Sie die Verschlüsselungsverfahren und Schlüssel“ schickt jeden auf die Krypto-Fährte. Komprimierte Daten sind von Chiffraten statistisch kaum unterscheidbar – und niemand testete Kompression, weil die Frage ja nach einem Schlüssel verlangte. Der BND hat nicht gelogen. Er hat nur eine Erwartung ausgenutzt." data-en="The task itself was the trap: “find the encryption methods and keys” sends everyone down the crypto trail. Compressed data is statistically almost indistinguishable from ciphertext – and nobody tested compression, because the question demanded a key. The BND didn't lie. It just exploited an expectation.">Die Aufgabenstellung selbst war die Falle: „Finden Sie die Verschlüsselungsverfahren und Schlüssel“ schickt jeden auf die Krypto-Fährte. Komprimierte Daten sind von Chiffraten statistisch kaum unterscheidbar – und niemand testete Kompression, weil die Frage ja nach einem Schlüssel verlangte. Der BND hat nicht gelogen. Er hat nur eine Erwartung ausgenutzt.</span></div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ SECTION: TEXT 2 ============================ -->
+<section id="t2" data-solve="2">
+<h2><span class="no">05</span><span data-de="Text 2 – das Two-Time-Pad" data-en="Text 2 – the two-time pad">Text 2 – das Two-Time-Pad</span></h2>
+
+<p data-de="76 Bytes, 62 verschiedene Byte-Werte, 59 % High-Bit-Bytes. Nach dem Text-3-Coup wurde natürlich zuerst die komplette Kompressions-Flotte durchprobiert – LZMA, lz4, snappy, zstd, PPMd, bzip2, LZW: alles negativ. Auch die beliebte Internet-Behauptung „einfach XOR mit LIBERTAS ET SECURITAS“ (das BND-Motto, 19 Zeichen – und 76 = 4 × 19!) wurde getestet. Ergebnis: Müll." data-en="76 bytes, 62 distinct values, 59% high-bit bytes. After the Text-3 coup, the entire compression fleet was tried first, of course – LZMA, lz4, snappy, zstd, PPMd, bzip2, LZW: all negative. The popular internet claim “just XOR with LIBERTAS ET SECURITAS” (the BND motto, 19 characters – and 76 = 4 × 19!) was tested too. Result: garbage.">76 Bytes, 62 verschiedene Byte-Werte, 59 % High-Bit-Bytes. Nach dem Text-3-Coup wurde natürlich zuerst die komplette Kompressions-Flotte durchprobiert – LZMA, lz4, snappy, zstd, PPMd, bzip2, LZW: alles negativ. Auch die beliebte Internet-Behauptung „einfach XOR mit LIBERTAS ET SECURITAS“ (das BND-Motto, 19 Zeichen – und 76 = 4 × 19!) wurde getestet. Ergebnis: Müll.</p>
+
+<div class="fail"><b data-de="FEHLSCHLAG" data-en="FAILED">FEHLSCHLAG</b><span data-de="sha256(„MATROSS“) beginnt zufällig mit denselben drei Bytes wie der spätere Key (9dca62e5… vs. 9dca62ef…). Eine echte Zufallskollision mit Wahrscheinlichkeit 1 : 16 Millionen – die trotzdem Stunden gekostet hat." data-en="sha256(“MATROSS”) happens to start with the same three bytes as the eventual key (9dca62e5… vs. 9dca62ef…). A genuine chance collision with odds of 1 in 16 million – which still cost hours.">sha256(„MATROSS“) beginnt zufällig mit denselben drei Bytes wie der spätere Key (9dca62e5… vs. 9dca62ef…). Eine echte Zufallskollision mit Wahrscheinlichkeit 1 : 16 Millionen – die trotzdem Stunden gekostet hat.</span></div>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot-wow"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Drei Bytes Übereinstimmung! Das ist entweder der Durchbruch oder das Universum, das dich trollt." data-en="Three matching bytes! That's either the breakthrough or the universe trolling you.">Drei Bytes Übereinstimmung! Das ist entweder der Durchbruch oder das Universum, das dich trollt.</p></div>
+</div>
+<div class="dlg me">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#me"/></svg>
+  <div class="bub"><div class="who" data-de="Autor" data-en="Author">Autor</div>
+  <p data-de="Es war das Universum. Bei genug getesteten Hypothesen passieren solche Treffer zwangsläufig. Der echte Durchbruch kam von einer viel älteren Idee." data-en="It was the universe. Test enough hypotheses and hits like that are inevitable. The real breakthrough came from a much older idea.">Es war das Universum. Bei genug getesteten Hypothesen passieren solche Treffer zwangsläufig. Der echte Durchbruch kam von einer viel älteren Idee.</p></div>
+</div>
+
+<p data-de="Die Two-Time-Pad-Idee: Was, wenn der Key einfach zu kurz ist und sich wiederholt? Dann kann man den Ciphertext gegen sich selbst XORen – versetzt um die Key-Länge k – und der Key hebt sich auf:" data-en="The two-time pad idea: what if the key is simply too short and repeats? Then you can XOR the ciphertext against itself – shifted by the key length k – and the key cancels out:">Die Two-Time-Pad-Idee: Was, wenn der Key einfach zu kurz ist und sich wiederholt? Dann kann man den Ciphertext gegen sich selbst XORen – versetzt um die Key-Länge k – und der Key hebt sich auf:</p>
+
+<pre>ct[i] ⊕ ct[i+k]  =  (pt[i] ⊕ key[i]) ⊕ (pt[i+k] ⊕ key[i])
+                 =  pt[i] ⊕ pt[i+k]          <span class="ok" data-de="← der Key ist weg!" data-en="← the key is gone!">← der Key ist weg!</span></pre>
+
+<p data-de="Übrig bleibt das XOR zweier Klartextstellen – und das hat eine verräterische Eigenschaft: ASCII-Text hat nie das oberste Bit gesetzt, also ist auch ASCII ⊕ ASCII immer kleiner als 0x80. Zufallsbytes schaffen das nur in etwa der Hälfte der Fälle. Probier es selbst: Schieb k durch und beobachte, wo die „ASCII-Signatur“ ausschlägt." data-en="What remains is the XOR of two plaintext positions – and that has a telltale property: ASCII text never has its top bit set, so ASCII ⊕ ASCII is always below 0x80 too. Random bytes manage that only about half the time. Try it yourself: sweep k and watch where the “ASCII signature” spikes.">Übrig bleibt das XOR zweier Klartextstellen – und das hat eine verräterische Eigenschaft: ASCII-Text hat nie das oberste Bit gesetzt, also ist auch ASCII ⊕ ASCII immer kleiner als 0x80. Zufallsbytes schaffen das nur in etwa der Hälfte der Fälle. Probier es selbst: Schieb k durch und beobachte, wo die „ASCII-Signatur“ ausschlägt.</p>
+
+<div class="play" id="pw2">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · Two-Time-Pad-Angriff" data-en="Playground · two-time pad attack">Playground · Two-Time-Pad-Angriff</span><span class="pcount"></span></div>
+  <div class="pbody">
+  <div class="stage">
+    <div class="pstep on">
+      <p class="small" data-de="Schritt 1: Key-Länge finden. Für jedes k zählen wir, welcher Anteil von ct[i] ⊕ ct[i+k] High-Bit-frei ist. Zufall liefert ~50 %. Zieh den Slider oder klick auf einen Balken:" data-en="Step 1: find the key length. For each k we measure what fraction of ct[i] ⊕ ct[i+k] is high-bit-free. Randomness gives ~50%. Drag the slider or click a bar:">Schritt 1: Key-Länge finden. Für jedes k zählen wir, welcher Anteil von ct[i] ⊕ ct[i+k] High-Bit-frei ist. Zufall liefert ~50 %. Zieh den Slider oder klick auf einen Balken:</p>
+      <input type="range" min="1" max="56" value="8" id="kslider" oninput="kbar(this.value)" aria-label="k">
+      <div class="kv">k = <span id="kval">8</span> · <span data-de="High-Bit-frei:" data-en="high-bit-free:">High-Bit-frei:</span> <span id="kscore" class="ok"></span> <span id="knote" class="am"></span></div>
+      <div class="barwrap" id="bars"><div class="half" style="bottom:50%"><span>50%</span></div></div>
+      <div class="axis"><span>k=1</span><span>k=20</span><span>k=40</span><span>k=56</span></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-html data-de="Bei <b>k = 40</b> sind 36 von 36 Positionen High-Bit-frei. Unter Zufall wäre das etwa 2<sup>−36</sup> ≈ 1,5 · 10<sup>−11</sup> – eins zu siebzig Milliarden. (k = 20 kommt auf 77 %: Zufall in den Top-Bits der Key-Bytes, die dort gegeneinander laufen.) Die Spur ct[i] ⊕ ct[i+40] ist ab jetzt pt[i] ⊕ pt[i+40] – das XOR zweier deutscher Textfragmente. Gelb: Werte unter 0x20, typisch für Buchstabe ⊕ Buchstabe." data-en="At <b>k = 40</b>, 36 of 36 positions are high-bit-free. Under randomness that's about 2<sup>−36</sup> ≈ 1.5 · 10<sup>−11</sup> – one in seventy billion. (k = 20 reaches 77%: chance agreement in the top bits of the key bytes that get XORed against each other there.) From now on, the stream ct[i] ⊕ ct[i+40] is pt[i] ⊕ pt[i+40] – the XOR of two German text fragments. Amber: values below 0x20, typical of letter ⊕ letter.">Bei <b>k = 40</b> sind 36 von 36 Positionen High-Bit-frei. Unter Zufall wäre das etwa 2<sup>−36</sup> ≈ 1,5 · 10<sup>−11</sup> – eins zu siebzig Milliarden. (k = 20 kommt auf 77 %: Zufall in den Top-Bits der Key-Bytes, die dort gegeneinander laufen.) Die Spur ct[i] ⊕ ct[i+40] ist ab jetzt pt[i] ⊕ pt[i+40] – das XOR zweier deutscher Textfragmente. Gelb: Werte unter 0x20, typisch für Buchstabe ⊕ Buchstabe.</p>
+      <div class="hex" id="xorspur"></div>
+      <p class="small dim" data-de="Wichtig: 76 Bytes, Key-Länge 40 – also überlappen nur die Positionen 0–35 mit 40–75. Die Key-Bytes 36–39 kommen im Text genau einmal vor. Die kann man nicht per XOR prüfen, nur per Sprachgefühl." data-en="Important: 76 bytes, key length 40 – so only positions 0–35 overlap with 40–75. Key bytes 36–39 occur exactly once in the text. Those can't be checked via XOR, only by feel for the language.">Wichtig: 76 Bytes, Key-Länge 40 – also überlappen nur die Positionen 0–35 mit 40–75. Die Key-Bytes 36–39 kommen im Text genau einmal vor. Die kann man nicht per XOR prüfen, nur per Sprachgefühl.</p>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Schritt 2: Crib Dragging. Rate ein Wort, das im Klartext vorkommen könnte, und schieb es über den Text. Wo es tatsächlich steht, erscheint in der Gegenzeile lesbarer Text – denn pt[i] ⊕ (pt[i] ⊕ pt[i+40]) = pt[i+40]. Die Leiste über dem Slider zeigt, wie „deutsch“ das Gegenstück an jeder Position aussieht. Gefällt dir ein Treffer: übernehmen – dann wird der Key Byte für Byte rekonstruiert. Achtung, Falle: Ein Crib an Position p und an p ± 40 liefert dasselbe Gegenstück – das XOR verrät nur das Paar, nicht die Zeile. Welche Variante stimmt, zeigt erst die Live-Entschlüsselung." data-en="Step 2: crib dragging. Guess a word that might be in the plaintext and drag it across the text. Where it really sits, readable text appears in the opposite lane – because pt[i] ⊕ (pt[i] ⊕ pt[i+40]) = pt[i+40]. The strip above the slider shows how “German” the counterpart looks at each position. Like a hit? Accept it – and the key gets rebuilt byte by byte. Watch out, trap: a crib at position p and at p ± 40 yields the same counterpart – the XOR only reveals the pair, not the lane. Only the live decryption shows which variant is right.">Schritt 2: Crib Dragging. Rate ein Wort, das im Klartext vorkommen könnte, und schieb es über den Text. Wo es tatsächlich steht, erscheint in der Gegenzeile lesbarer Text – denn pt[i] ⊕ (pt[i] ⊕ pt[i+40]) = pt[i+40]. Die Leiste über dem Slider zeigt, wie „deutsch“ das Gegenstück an jeder Position aussieht. Gefällt dir ein Treffer: übernehmen – dann wird der Key Byte für Byte rekonstruiert. Achtung, Falle: Ein Crib an Position p und an p ± 40 liefert dasselbe Gegenstück – das XOR verrät nur das Paar, nicht die Zeile. Welche Variante stimmt, zeigt erst die Live-Entschlüsselung.</p>
+      <div class="row">
+        <input type="text" id="crib" value="nicht" oninput="drag()" spellcheck="false" autocomplete="off" style="width:260px" aria-label="crib">
+        <span class="kv">pos <span id="cribposv">0</span></span>
+        <span class="kv" data-de="· Plausibilität:" data-en="· plausibility:">· Plausibilität:</span> <span class="kv ok" id="cribscore"></span>
+      </div>
+      <div class="row" style="margin-top:0">
+        <span class="kv" data-de="Ideen:" data-en="ideas:">Ideen:</span>
+        <button class="chip" onclick="setCrib('nicht')">nicht</button>
+        <button class="chip" onclick="setCrib(' und ')">␣und␣</button>
+        <button class="chip" onclick="setCrib('noch nicht von')">noch nicht von</button>
+        <button class="chip" onclick="setCrib('aber noch nicht von allen')">aber noch nicht von allen</button>
+        <button class="chip" onclick="setCrib('(Karl Valentin)')">(Karl Valentin)</button>
+      </div>
+      <div class="heat" id="heat" title="crib score per position"></div>
+      <input type="range" min="0" max="75" value="0" id="cribpos" oninput="drag()" aria-label="position">
+      <div class="scrollx" style="margin-top:10px">
+        <div class="lanes">
+          <div class="ln">pt 0–39</div><div class="lane" id="laneA"></div>
+          <div class="ln">pt 40–75</div><div class="lane" id="laneB"></div>
+          <div class="ln">key</div><div class="lane key" id="laneK"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="step" onclick="acceptCrib()" data-de="✓ Treffer übernehmen" data-en="✓ accept hit">✓ Treffer übernehmen</button>
+        <button class="ghost" onclick="resetKey()" data-de="Key leeren" data-en="clear key">Key leeren</button>
+        <span class="kv"><span data-de="Key bekannt:" data-en="key known:">Key bekannt:</span> <span id="keycount" class="ok">0</span>/40</span>
+      </div>
+      <div class="keyprog" id="keyprog"></div>
+      <div class="result neutral"><span class="lbl" data-de="Live-Entschlüsselung mit dem bisher rekonstruierten Key" data-en="Live decryption with the key recovered so far">Live-Entschlüsselung mit dem bisher rekonstruierten Key</span><span id="livept"></span></div>
+      <p class="small dim" id="keymsg" data-de="Tipp: „noch nicht von“ an Position 39 – das erste Zeichen landet auf einem der vier Einzelbytes, der Rest verrät den Satzanfang." data-en="Hint: “noch nicht von” at position 39 – its first letter lands on one of the four single-use bytes, the rest reveals how the sentence begins.">Tipp: „noch nicht von“ an Position 39 – das erste Zeichen landet auf einem der vier Einzelbytes, der Rest verrät den Satzanfang.</p>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Schritt 3: Der vollständige 40-Byte-Key. Jede Spalte unten ist ein Byte: Chiffrat ⊕ Key = Klartext. Fahr über ein Byte, um die Rechnung zu sehen." data-en="Step 3: the complete 40-byte key. Each column below is one byte: ciphertext ⊕ key = plaintext. Hover a byte to see the math.">Schritt 3: Der vollständige 40-Byte-Key. Jede Spalte unten ist ein Byte: Chiffrat ⊕ Key = Klartext. Fahr über ein Byte, um die Rechnung zu sehen.</p>
+      <div class="hex" style="margin:8px 0"><span class="am">key:</span> <span class="am">9dca62ef 7818c6b6 ec0b2e28 73d6f5e3 cdbb45f3 90eb68d9 c043c6ac 46306c1d 91e4cf86 da732e5a</span></div>
+      <div class="bytes" id="t2bytes"></div>
+      <div class="kv" id="t2math" style="margin-top:6px">&nbsp;</div>
+      <div class="result"><span class="lbl" data-de="Klartext (76 Bytes, verifiziert)" data-en="Plaintext (76 bytes, verified)">Klartext (76 Bytes, verifiziert)</span><span id="t2pt"></span></div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="step" data-de="Weiter →" data-en="Next →" onclick="stepper('pw2',this)">Weiter →</button>
+    <button class="ghost" data-de="↺ Reset" data-en="↺ Reset" onclick="stepper('pw2',this,true)">↺ Reset</button>
+    <div class="dots" id="pw2dots"></div>
+  </div>
+  </div>
+</div>
+
+<div class="bigq" data-de="„Es ist schon alles gesagt worden, aber noch nicht von allen.“ – Karl Valentin" data-en="“Everything has already been said, but not yet by everyone.” – Karl Valentin">„Es ist schon alles gesagt worden, aber noch nicht von allen.“ – Karl Valentin</div>
+
+<div class="callout"><div class="t" data-de="Die Pointe" data-en="The punchline">Die Pointe</div>
+<span data-de="Der Key ist mit an Sicherheit grenzender Wahrscheinlichkeit echter Zufall – alle Ableitungswege (Hashes, KDFs, PRNGs, Kodierungen, sogar DES unter den Text-4-Keys) wurden negativ getestet. Der BND hat bewusst einen unknackbaren Key gewählt … und ihn dann einfach zweimal benutzt. „Zufällig“ und „sicher“ sind nicht dasselbe. Und das Zitat? Passt wie die Faust aufs Auge: Der Key hat schon alles gesagt – nur eben zweimal." data-en="The key is, with probability bordering on certainty, genuine randomness – every derivation path (hashes, KDFs, PRNGs, encodings, even DES under the Text-4 keys) tested negative. The BND deliberately chose an unguessable key … and then simply used it twice. “Random” and “secure” are not the same thing. And the quote? Couldn't fit better: the key had already said everything – just twice.">Der Key ist mit an Sicherheit grenzender Wahrscheinlichkeit echter Zufall – alle Ableitungswege (Hashes, KDFs, PRNGs, Kodierungen, sogar DES unter den Text-4-Keys) wurden negativ getestet. Der BND hat bewusst einen unknackbaren Key gewählt … und ihn dann einfach zweimal benutzt. „Zufällig“ und „sicher“ sind nicht dasselbe. Und das Zitat? Passt wie die Faust aufs Auge: Der Key hat schon alles gesagt – nur eben zweimal.</span></div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ SECTION: TEXT 4 ============================ -->
+<section id="t4" data-solve="4">
+<h2><span class="no">06</span><span data-de="Text 4 – DES mit schwachem Schlüssel" data-en="Text 4 – DES with a weak key">Text 4 – DES mit schwachem Schlüssel</span></h2>
+
+<p data-de="56 Bytes, Englisch, 50 % High-Bit – und entscheidend: 56 = 7 × 8. Exakt sieben 8-Byte-Blöcke, kein Byte zu viel. Das schreit nach einer 64-Bit-Blockchiffre, und die kanonische ist DES. Mit 2⁵⁶ möglichen Schlüsseln ist DES heute zwar mit Spezialhardware knackbar – aber es gibt eine Abkürzung: DES hat eine Handvoll bekannter schwacher und semi-schwacher Schlüssel. 16 Stück, komplett tabelliert. Man muss nicht 72 Billiarden Keys probieren. Sondern 16." data-en="56 bytes, English, 50% high-bit – and crucially: 56 = 7 × 8. Exactly seven 8-byte blocks, not a byte to spare. That screams 64-bit block cipher, and the canonical one is DES. With 2⁵⁶ possible keys, DES can be brute-forced with dedicated hardware these days – but there's a shortcut: DES has a handful of known weak and semi-weak keys. 16 of them, fully tabulated. You don't have to try 72 quadrillion keys. You have to try 16.">56 Bytes, Englisch, 50 % High-Bit – und entscheidend: 56 = 7 × 8. Exakt sieben 8-Byte-Blöcke, kein Byte zu viel. Das schreit nach einer 64-Bit-Blockchiffre, und die kanonische ist DES. Mit 2⁵⁶ möglichen Schlüsseln ist DES heute zwar mit Spezialhardware knackbar – aber es gibt eine Abkürzung: DES hat eine Handvoll bekannter schwacher und semi-schwacher Schlüssel. 16 Stück, komplett tabelliert. Man muss nicht 72 Billiarden Keys probieren. Sondern 16.</p>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot-smug"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Und genau einer liefert Text: 01 1F 01 1F 01 0E 01 0E – der erste Eintrag der kanonischen Semi-Weak-Liste, samt korrekter ungerader Parität. Der BND hat den Schlüssel quasi aus der Wikipedia-Tabelle abgeschrieben. Hier ist die echte Batterie, mit einer echten DES-Implementierung (FIPS 46-3, ein paar Dutzend Zeilen JavaScript am Ende dieser Seite):" data-en="And exactly one of them yields text: 01 1F 01 1F 01 0E 01 0E – the first entry of the canonical semi-weak list, complete with correct odd parity. The BND basically copied the key off the Wikipedia table. Here's the real battery, with a real DES implementation (FIPS 46-3, a few dozen lines of JavaScript at the bottom of this page):">Und genau einer liefert Text: 01 1F 01 1F 01 0E 01 0E – der erste Eintrag der kanonischen Semi-Weak-Liste, samt korrekter ungerader Parität. Der BND hat den Schlüssel quasi aus der Wikipedia-Tabelle abgeschrieben. Hier ist die echte Batterie, mit einer echten DES-Implementierung (FIPS 46-3, ein paar Dutzend Zeilen JavaScript am Ende dieser Seite):</p></div>
+</div>
+
+<div class="play" id="pw4">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · DES-Labor" data-en="Playground · DES lab">Playground · DES-Labor</span><span class="pcount"></span></div>
+  <div class="pbody">
+  <div class="stage">
+    <div class="pstep on">
+      <p class="small" data-de="Die Weak-Key-Batterie: 4 schwache + 12 semi-schwache Schlüssel. Jeder entschlüsselt alle 56 Bytes; der Balken zeigt den Anteil druckbarer Zeichen." data-en="The weak-key battery: 4 weak + 12 semi-weak keys. Each one decrypts all 56 bytes; the bar shows the fraction of printable characters.">Die Weak-Key-Batterie: 4 schwache + 12 semi-schwache Schlüssel. Jeder entschlüsselt alle 56 Bytes; der Balken zeigt den Anteil druckbarer Zeichen.</p>
+      <button class="step" id="batBtn" onclick="runBattery(this)" data-de="▶ Batterie starten" data-en="▶ run battery">▶ Batterie starten</button>
+      <div class="battery" id="battery"></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="DES-ECB, Key 01 1F 01 1F 01 0E 01 0E. Sieben Blöcke à 8 Bytes, jeder unabhängig – entschlüssle sie nacheinander:" data-en="DES-ECB, key 01 1F 01 1F 01 0E 01 0E. Seven 8-byte blocks, each independent – decrypt them one at a time:">DES-ECB, Key 01 1F 01 1F 01 0E 01 0E. Sieben Blöcke à 8 Bytes, jeder unabhängig – entschlüssle sie nacheinander:</p>
+      <div class="blocks" id="t4blocks"></div>
+      <div class="result neutral"><span class="lbl" data-de="Klartext bisher" data-en="Plaintext so far">Klartext bisher</span><span id="t4pt" class="ok"></span><span id="t4cur" class="faint"></span></div>
+      <div class="btnrow"><button class="step" onclick="t4next(this)" data-de="Block entschlüsseln →" data-en="Decrypt block →">Block entschlüsseln →</button></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Warum heißt der Key „semi-schwach“? DES leitet aus dem 56-Bit-Key 16 Rundenschlüssel ab. Bei einem guten Key sind alle 16 verschieden. Bei 01 1F 01 1F 01 0E 01 0E gibt es genau zwei – live berechnet:" data-en="Why is this key called “semi-weak”? DES derives 16 round keys from the 56-bit key. With a good key, all 16 differ. With 01 1F 01 1F 01 0E 01 0E there are exactly two – computed live:">Warum heißt der Key „semi-schwach“? DES leitet aus dem 56-Bit-Key 16 Rundenschlüssel ab. Bei einem guten Key sind alle 16 verschieden. Bei 01 1F 01 1F 01 0E 01 0E gibt es genau zwei – live berechnet:</p>
+      <div class="subk-l">K = 011F011F010E010E</div><div class="subk" id="subkA"></div>
+      <div class="subk-l" data-de="K′ = 1F011F010E010E01 (Partner-Key)" data-en="K′ = 1F011F010E010E01 (partner key)">K′ = 1F011F010E010E01 (Partner-Key)</div><div class="subk" id="subkB"></div>
+      <p class="small" data-de="Entschlüsseln bei DES heißt: dieselben Runden, Rundenschlüssel in umgekehrter Reihenfolge. Lies die obere Zeile rückwärts – das ist exakt die untere. Also gilt: Verschlüsseln mit K′ = Entschlüsseln mit K. Beweis gefällig?" data-en="Decrypting with DES means: same rounds, round keys in reverse order. Read the top row backwards – it's exactly the bottom one. So: encrypting with K′ = decrypting with K. Want proof?">Entschlüsseln bei DES heißt: dieselben Runden, Rundenschlüssel in umgekehrter Reihenfolge. Lies die obere Zeile rückwärts – das ist exakt die untere. Also gilt: Verschlüsseln mit K′ = Entschlüsseln mit K. Beweis gefällig?</p>
+      <button class="ghost" onclick="partnerDemo()" data-de="Chiffrat mit K′ VERschlüsseln" data-en="ENcrypt the ciphertext with K′">Chiffrat mit K′ VERschlüsseln</button>
+      <div class="result" id="partnerOut" style="display:none"></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="Und jetzt das Byte aus Abschnitt 02. Klick auf ein beliebiges Chiffrat-Byte, um sein niedrigstes Bit zu kippen – oder lade direkt die Schmeh-Abschrift mit 0x28 statt 0x2B. ECB-Modus heißt: Jeder Block ist eine Insel. Ein kaputtes Byte zerstört genau seinen Block, komplett, und sonst nichts." data-en="And now the byte from section 02. Click any ciphertext byte to flip its lowest bit – or load the Schmeh transcript with 0x28 instead of 0x2B right away. ECB mode means: every block is an island. One corrupted byte destroys exactly its own block, completely, and nothing else.">Und jetzt das Byte aus Abschnitt 02. Klick auf ein beliebiges Chiffrat-Byte, um sein niedrigstes Bit zu kippen – oder lade direkt die Schmeh-Abschrift mit 0x28 statt 0x2B. ECB-Modus heißt: Jeder Block ist eine Insel. Ein kaputtes Byte zerstört genau seinen Block, komplett, und sonst nichts.</p>
+      <div class="row"><button class="ghost" id="typoBtn" onclick="typoLoad(true)" data-de="Schmeh-Abschrift laden (0x28)" data-en="load Schmeh transcript (0x28)">Schmeh-Abschrift laden (0x28)</button><button class="ghost" onclick="typoLoad(false)" data-de="BND-Original (0x2B)" data-en="BND original (0x2B)">BND-Original (0x2B)</button></div>
+      <div class="blocks" id="typoBlocks"></div>
+      <div class="kv" id="typoInfo"></div>
+    </div>
+    <div class="pstep">
+      <p class="small" data-de="„Colorless green ideas sleep furiously“ – Noam Chomskys berühmtes Beispiel für einen grammatisch einwandfreien, aber bedeutungslosen Satz (Syntactic Structures, 1957). Dahinter „(Noam Chomsky)“ und 4 Leerzeichen Padding – Space-Padding statt PKCS#7, ganz Old School. Die Botschaft passt perfekt zur Challenge: Diese Texte waren zwölf Jahre lang syntaktisch einwandfreie Rätsel ohne bekannte Bedeutung." data-en="“Colorless green ideas sleep furiously” – Noam Chomsky's famous example of a grammatically flawless yet meaningless sentence (Syntactic Structures, 1957). Followed by “(Noam Chomsky)” and 4 spaces of padding – space padding instead of PKCS#7, very old school. The message fits the challenge perfectly: for twelve years, these texts were syntactically flawless puzzles with no known meaning.">„Colorless green ideas sleep furiously“ – Noam Chomskys berühmtes Beispiel für einen grammatisch einwandfreien, aber bedeutungslosen Satz (Syntactic Structures, 1957). Dahinter „(Noam Chomsky)“ und 4 Leerzeichen Padding – Space-Padding statt PKCS#7, ganz Old School. Die Botschaft passt perfekt zur Challenge: Diese Texte waren zwölf Jahre lang syntaktisch einwandfreie Rätsel ohne bekannte Bedeutung.</p>
+      <div class="result"><span class="lbl" data-de="Klartext (56 Bytes, live entschlüsselt, Leerzeichen als ␣)" data-en="Plaintext (56 bytes, decrypted live, spaces shown as ␣)">Klartext (56 Bytes, live entschlüsselt, Leerzeichen als ␣)</span><span id="t4final"></span></div>
+    </div>
+  </div>
+  <div class="btnrow">
+    <button class="step" data-de="Weiter →" data-en="Next →" onclick="stepper('pw4',this)">Weiter →</button>
+    <button class="ghost" data-de="↺ Reset" data-en="↺ Reset" onclick="stepper('pw4',this,true)">↺ Reset</button>
+    <div class="dots" id="pw4dots"></div>
+  </div>
+  </div>
+</div>
+
+<div class="fail"><b data-de="FEHLSCHLÄGE" data-en="FAILED ATTEMPTS">FEHLSCHLÄGE</b><span data-de="Datum-Keys (2014 …), Wort-Keys, PRNG-Streams, Running Key mit dem Text-1-Klartext, Hash-Ketten, ct4 XOR dem Text-2-Key – alles negativ. Erst die systematische Weak-Key-Batterie über 64-Bit-Blockchiffren traf. Und sie traf nur, weil das Chiffrat aus dem Wayback-Original stammte." data-en="date keys (2014 …), word keys, PRNG streams, running key with the Text-1 plaintext, hash chains, ct4 XOR the Text-2 key – all negative. Only the systematic weak-key battery across 64-bit block ciphers hit. And it only hit because the ciphertext came from the Wayback original.">Datum-Keys (2014 …), Wort-Keys, PRNG-Streams, Running Key mit dem Text-1-Klartext, Hash-Ketten, ct4 XOR dem Text-2-Key – alles negativ. Erst die systematische Weak-Key-Batterie über 64-Bit-Blockchiffren traf. Und sie traf nur, weil das Chiffrat aus dem Wayback-Original stammte.</span></div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ SECTION: SICHER ============================ -->
+<section id="sicher">
+<h2><span class="no">07</span><span data-de="Wie hätte der BND es sicher gemacht?" data-en="How should the BND have done it?">Wie hätte der BND es sicher gemacht?</span></h2>
+
+<p data-de="Fairerweise: Die Texte waren als Lehrstücke gedacht, nicht als Staatsgeheimnisse. Aber genau deshalb lohnt der Umkehrschluss – jede der vier Fallen hat eine Standardantwort, die heute in jede Krypto-Bibliothek eingebaut ist:" data-en="To be fair: these texts were meant as teaching pieces, not state secrets. But that's exactly why flipping the question is worthwhile – each of the four traps has a standard answer that ships with every crypto library today:">Fairerweise: Die Texte waren als Lehrstücke gedacht, nicht als Staatsgeheimnisse. Aber genau deshalb lohnt der Umkehrschluss – jede der vier Fallen hat eine Standardantwort, die heute in jede Krypto-Bibliothek eingebaut ist:</p>
+
+<div class="fixes">
+  <div class="fix"><div class="fh">Text 1 · <span data-de="Doppelwürfel" data-en="double transposition">Doppelwürfel</span></div><div class="ft" data-de="Schlüssel sind kein Motto" data-en="Keys are not slogans">Schlüssel sind kein Motto</div>
+    <span class="bad" data-de="Schlüsselwörter, die thematisch zum Klartext passen; berühmter, erratbarer Klartext" data-en="keywords that match the plaintext's topic; a famous, guessable plaintext">Schlüsselwörter, die thematisch zum Klartext passen; berühmter, erratbarer Klartext</span>
+    <span class="good" data-de="Schlüssel aus einem kryptographischen Zufallsgenerator – niemals aus einem Wörterbuch" data-en="keys from a cryptographic random generator – never from a dictionary">Schlüssel aus einem kryptographischen Zufallsgenerator – niemals aus einem Wörterbuch</span>
+    <span class="good" data-de="Moderne authentifizierte Verschlüsselung statt Handverfahren" data-en="modern authenticated encryption instead of hand ciphers">Moderne authentifizierte Verschlüsselung statt Handverfahren</span></div>
+  <div class="fix"><div class="fh">Text 2 · XOR</div><div class="ft" data-de="Ein Pad ist ein Pad" data-en="A pad is a pad">Ein Pad ist ein Pad</div>
+    <span class="bad" data-de="40 Byte Key für 76 Byte Text – der Key muss sich wiederholen" data-en="a 40-byte key for 76 bytes of text – the key has to repeat">40 Byte Key für 76 Byte Text – der Key muss sich wiederholen</span>
+    <span class="good" data-de="One-Time-Pad nur, wenn der Key mindestens so lang ist wie die Nachricht und nie wiederverwendet wird" data-en="one-time pad only if the key is at least as long as the message and never reused">One-Time-Pad nur, wenn der Key mindestens so lang ist wie die Nachricht und nie wiederverwendet wird</span>
+    <span class="good" data-de="In der Praxis: Stromchiffre wie ChaCha20 oder AES-GCM mit eindeutigem Nonce pro Nachricht" data-en="in practice: a stream cipher like ChaCha20, or AES-GCM with a unique nonce per message">In der Praxis: Stromchiffre wie ChaCha20 oder AES-GCM mit eindeutigem Nonce pro Nachricht</span></div>
+  <div class="fix"><div class="fh">Text 3 · DEFLATE</div><div class="ft" data-de="Rauschen ist kein Geheimnis" data-en="Noise is not a secret">Rauschen ist kein Geheimnis</div>
+    <span class="bad" data-de="Kompression als Verschlüsselungs-Ersatz: hohe Entropie, null Geheimhaltung" data-en="compression as an encryption substitute: high entropy, zero secrecy">Kompression als Verschlüsselungs-Ersatz: hohe Entropie, null Geheimhaltung</span>
+    <span class="good" data-de="Kompression ist Kodierung. Wenn beides nötig ist: erst komprimieren, dann verschlüsseln" data-en="compression is encoding. If you need both: compress first, then encrypt">Kompression ist Kodierung. Wenn beides nötig ist: erst komprimieren, dann verschlüsseln</span>
+    <span class="good" data-de="… und dabei Längen-Lecks im Blick behalten (vgl. CRIME/BREACH)" data-en="… while keeping length leaks in mind (cf. CRIME/BREACH)">… und dabei Längen-Lecks im Blick behalten (vgl. CRIME/BREACH)</span></div>
+  <div class="fix"><div class="fh">Text 4 · DES</div><div class="ft" data-de="Kein Key aus der Tabelle" data-en="No keys from the table">Kein Key aus der Tabelle</div>
+    <span class="bad" data-de="DES: 56-Bit-Schlüsselraum, 1998 von der EFF-Maschine „Deep Crack“ in 56 Stunden geknackt" data-en="DES: 56-bit key space, cracked by the EFF's “Deep Crack” machine in 56 hours back in 1998">DES: 56-Bit-Schlüsselraum, 1998 von der EFF-Maschine „Deep Crack“ in 56 Stunden geknackt</span>
+    <span class="bad" data-de="Semi-schwacher Key aus der Lehrbuchliste, ECB-Modus, kein Integritätsschutz" data-en="a semi-weak key from the textbook list, ECB mode, no integrity protection">Semi-schwacher Key aus der Lehrbuchliste, ECB-Modus, kein Integritätsschutz</span>
+    <span class="good" data-de="AES-256 im AEAD-Modus – Manipulation fällt auf, statt still Müll zu liefern" data-en="AES-256 in an AEAD mode – tampering gets detected instead of silently yielding garbage">AES-256 im AEAD-Modus – Manipulation fällt auf, statt still Müll zu liefern</span></div>
+</div>
+
+<p data-de="Der letzte Punkt verdient eine Demo, denn er schließt den Kreis zum Tippfehler aus Abschnitt 02. Bei DES-ECB lieferte das falsche Byte stillschweigend einen Block Müll. Bei authentifizierter Verschlüsselung gibt es keinen Müll – es gibt eine Fehlermeldung. Hier verschlüsselt die WebCrypto-API deines Browsers den Chomsky-Satz mit AES-256-GCM:" data-en="The last point deserves a demo, because it closes the loop with the typo from section 02. With DES-ECB, the wrong byte silently produced a block of garbage. With authenticated encryption there is no garbage – there is an error. Here your browser's WebCrypto API encrypts the Chomsky sentence with AES-256-GCM:">Der letzte Punkt verdient eine Demo, denn er schließt den Kreis zum Tippfehler aus Abschnitt 02. Bei DES-ECB lieferte das falsche Byte stillschweigend einen Block Müll. Bei authentifizierter Verschlüsselung gibt es keinen Müll – es gibt eine Fehlermeldung. Hier verschlüsselt die WebCrypto-API deines Browsers den Chomsky-Satz mit AES-256-GCM:</p>
+
+<div class="play" id="pw5">
+  <div class="pbar"><span class="tl3"><i></i><i></i><i></i></span><span class="ptitle" data-de="Playground · So sähe Text 4 heute aus" data-en="Playground · what Text 4 would look like today">Playground · So sähe Text 4 heute aus</span><span class="pcount">AES-256-GCM</span></div>
+  <div class="pbody">
+    <div class="row" style="margin-top:0">
+      <button class="step" onclick="gcmEncrypt()" data-de="Verschlüsseln (neuer Key + Nonce)" data-en="Encrypt (new key + nonce)">Verschlüsseln (neuer Key + Nonce)</button>
+      <button class="ghost" onclick="gcmTamper(false)" data-de="Entschlüsseln" data-en="Decrypt">Entschlüsseln</button>
+      <button class="ghost" onclick="gcmTamper(true)" data-de="Ein Bit kippen + entschlüsseln" data-en="Flip one bit + decrypt">Ein Bit kippen + entschlüsseln</button>
+    </div>
+    <div class="small mono" id="gcmView" style="line-height:1.8;word-break:normal;margin-top:6px"><span class="faint" data-de="Klick auf „Verschlüsseln“. Jeder Klick erzeugt einen frischen 256-Bit-Key und einen frischen 96-Bit-Nonce – derselbe Klartext ergibt jedes Mal ein völlig anderes Chiffrat." data-en="Click “Encrypt”. Every click generates a fresh 256-bit key and a fresh 96-bit nonce – the same plaintext yields a completely different ciphertext every time.">Klick auf „Verschlüsseln“. Jeder Klick erzeugt einen frischen 256-Bit-Key und einen frischen 96-Bit-Nonce – derselbe Klartext ergibt jedes Mal ein völlig anderes Chiffrat.</span></div>
+    <div class="result neutral" id="gcmOut" style="display:none"></div>
+  </div>
+</div>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Merkst du was? Kein Playground in diesem Abschnitt hat einen „Knacken“-Knopf. Das ist der Punkt. Die sichere Variante ist langweilig – und Langeweile ist in der Kryptographie das höchste Lob." data-en="Notice something? No playground in this section has a “crack it” button. That's the point. The secure version is boring – and in cryptography, boring is the highest praise.">Merkst du was? Kein Playground in diesem Abschnitt hat einen „Knacken“-Knopf. Das ist der Punkt. Die sichere Variante ist langweilig – und Langeweile ist in der Kryptographie das höchste Lob.</p></div>
+</div>
+</section>
+
+<div class="sep"></div>
+<!-- ============================ FAZIT ============================ -->
+<section id="fazit">
+<h2><span class="no">08</span><span data-de="Fazit – die Didaktik dahinter" data-en="Takeaways – the lesson design">Fazit – die Didaktik dahinter</span></h2>
+
+<p data-de="Rückblickend war die Challenge ein kleines, sehr bewusst gebautes Lehrstück – jeder Text demonstriert genau eine andere Falle:" data-en="In hindsight, the challenge was a small, very deliberately built teaching piece – each text demonstrates exactly one different trap:">Rückblickend war die Challenge ein kleines, sehr bewusst gebautes Lehrstück – jeder Text demonstriert genau eine andere Falle:</p>
+
+<div class="tblwrap"><table>
+<tr><th>Text</th><th data-de="Verfahren" data-en="Method">Verfahren</th><th data-de="Die Falle" data-en="The trap">Die Falle</th><th data-de="Klartext" data-en="Plaintext">Klartext</th><th data-de="Gelöst" data-en="Solved">Gelöst</th></tr>
+<tr><td class="mono">1</td><td data-de="Doppelwürfel" data-en="double transposition">Doppelwürfel</td><td data-de="erratbare Schlüssel, berühmter Klartext" data-en="guessable keys, famous plaintext">erratbare Schlüssel, berühmter Klartext</td><td class="small" data-de="Art. 1 GG" data-en="Art. 1, Basic Law">Art. 1 GG</td><td class="mono small">2017</td></tr>
+<tr><td class="mono">2</td><td data-de="XOR, 40-Byte-Key periodisch" data-en="XOR, repeating 40-byte key">XOR, 40-Byte-Key periodisch</td><td data-de="zu kurzer Zufallskey → Two-Time-Pad" data-en="short random key → two-time pad">zu kurzer Zufallskey → Two-Time-Pad</td><td class="small">Karl Valentin</td><td class="mono small">2026</td></tr>
+<tr><td class="mono">3</td><td data-de="raw DEFLATE (kein Chiffrat)" data-en="raw DEFLATE (no cipher)">raw DEFLATE (kein Chiffrat)</td><td data-de="Kompression sieht aus wie Krypto" data-en="compression looks like crypto">Kompression sieht aus wie Krypto</td><td class="small" data-de="BND-Leitbild" data-en="BND mission statement">BND-Leitbild</td><td class="mono small">2026</td></tr>
+<tr><td class="mono">4</td><td>DES-ECB</td><td data-de="semi-schwacher Schlüssel" data-en="semi-weak key">semi-schwacher Schlüssel</td><td class="small">Chomsky</td><td class="mono small">2026</td></tr>
+</table></div>
+
+<p data-de="Vier Verfahren, vier verschiedene Schwächen: erratbare Schlüssel, Schlüssel-Wiederverwendung, falsche Problemannahme, schwacher Schlüssel. Und eine fünfte, die gar nicht vom BND kam: die unverifizierte Abschrift. Wer alle Lösungen versteht, hat einen Crashkurs in praktischer Kryptanalyse hinter sich. Der BND hat seine Hausaufgaben gemacht – er hat sie nur nie korrigiert." data-en="Four methods, four different weaknesses: guessable keys, key reuse, a wrong problem assumption, a weak key. And a fifth that didn't come from the BND at all: the unverified transcript. Understand all the solutions and you've completed a crash course in practical cryptanalysis. The BND did its homework – it just never graded it.">Vier Verfahren, vier verschiedene Schwächen: erratbare Schlüssel, Schlüssel-Wiederverwendung, falsche Problemannahme, schwacher Schlüssel. Und eine fünfte, die gar nicht vom BND kam: die unverifizierte Abschrift. Wer alle Lösungen versteht, hat einen Crashkurs in praktischer Kryptanalyse hinter sich. Der BND hat seine Hausaufgaben gemacht – er hat sie nur nie korrigiert.</p>
+
+<div class="bigq" data-de="„Es ist schon alles gesagt worden, aber noch nicht von allen.“ – der BND wusste, was er tat." data-en="“Everything has already been said, but not yet by everyone.” – the BND knew what it was doing.">„Es ist schon alles gesagt worden, aber noch nicht von allen.“ – der BND wusste, was er tat.</div>
+
+<div class="dlg">
+  <svg class="ava" viewBox="0 0 44 44"><use href="#bot"/></svg>
+  <div class="bub"><div class="who">Cipher</div>
+  <p data-de="Methodik am Rand: Die Lösungen kamen aus einem Multi-Modell-Setup – Ideen von mehreren KI-Agenten (SWE-2 Max, Claude Opus 5.5, DeepSeek V4.1), unabhängig verifiziert durch einen Reviewer. Text 2 knackte Opus (Two-Time-Pad-Signatur + Crib Dragging), Text 4 SWE-2 Max (Weak-Key-Batterie), Text 3 ebenfalls Opus (DEFLATE). Alle Ergebnisse byte-exakt reproduziert – und in diesem Post noch einmal live in deinem Browser." data-en="Methodology note: the solutions came from a multi-model setup – ideas from several AI agents (SWE-2 Max, Claude Opus 5.5, DeepSeek V4.1), independently verified by a reviewer. Opus cracked Text 2 (two-time-pad signature + crib dragging), SWE-2 Max Text 4 (weak-key battery), Opus Text 3 as well (DEFLATE). All results reproduced byte-exactly – and once more, live in your browser, in this very post.">Methodik am Rand: Die Lösungen kamen aus einem Multi-Modell-Setup – Ideen von mehreren KI-Agenten (SWE-2 Max, Claude Opus 5.5, DeepSeek V4.1), unabhängig verifiziert durch einen Reviewer. Text 2 knackte Opus (Two-Time-Pad-Signatur + Crib Dragging), Text 4 SWE-2 Max (Weak-Key-Batterie), Text 3 ebenfalls Opus (DEFLATE). Alle Ergebnisse byte-exakt reproduziert – und in diesem Post noch einmal live in deinem Browser.</p>
+  <p data-de="Einzige offene Frage: die Herkunft der 40 Key-Bytes von Text 2 – vermutlich echter Zufall. Falls du es besser weißt: information@bundesnachrichtendienst.de nimmt laut Aufgabenstellung gern Antwortvorschläge entgegen. Wir warten seit 2014 auf die Musterlösung." data-en="One open question remains: the origin of Text 2's 40 key bytes – probably genuine randomness. If you know better: according to the task, information@bundesnachrichtendienst.de gladly accepts submissions. We've been waiting for the answer key since 2014.">Einzige offene Frage: die Herkunft der 40 Key-Bytes von Text 2 – vermutlich echter Zufall. Falls du es besser weißt: information@bundesnachrichtendienst.de nimmt laut Aufgabenstellung gern Antwortvorschläge entgegen. Wir warten seit 2014 auf die Musterlösung.</p></div>
+</div>
+</section>
+
+</main>
+
+<footer>
+<div class="wrap">
+  <p class="small faint" data-de="Kryptanalyse &amp; Text: Devin · Cipher ist eine erfundene Dialogfigur · Chiffrate: BND via Wayback Machine (2016) · Lösung T1: Ralf Bülow &amp; Marc via Cipherbrain (Dez 2017) · Lösungen T2–T4: 2026, verifiziert" data-en="Cryptanalysis &amp; text: Devin · Cipher is a fictional dialogue character · Ciphertexts: BND via Wayback Machine (2016) · T1 solution: Ralf Bülow &amp; Marc via Cipherbrain (Dec 2017) · T2–T4 solutions: 2026, verified">Kryptanalyse &amp; Text: Devin · Cipher ist eine erfundene Dialogfigur · Chiffrate: BND via Wayback Machine (2016) · Lösung T1: Ralf Bülow &amp; Marc via Cipherbrain (Dez 2017) · Lösungen T2–T4: 2026, verifiziert</p>
+  <p class="small faint" data-de="Alles auf dieser Seite rechnet lokal: DES nach FIPS 46-3, ein DEFLATE-Inflater nach RFC 1951, der Doppelwürfel und AES-GCM über WebCrypto. Kein Tracking, keine Requests – außer für die Webfonts." data-en="Everything on this page computes locally: DES per FIPS 46-3, a DEFLATE inflater per RFC 1951, the double transposition, and AES-GCM via WebCrypto. No tracking, no requests – except for the web fonts.">Alles auf dieser Seite rechnet lokal: DES nach FIPS 46-3, ein DEFLATE-Inflater nach RFC 1951, der Doppelwürfel und AES-GCM über WebCrypto. Kein Tracking, keine Requests – außer für die Webfonts.</p>
+</div>
+</footer>
+<script>
+/* ---------- data ---------- */
+const CT2 = "D8B942860B6CE6C58F63414653B7998FA8C86594F59809BEB463B1C334540973BDC4AEE4BF010E34F2A90ACF1671A5DE982B58471DF6948FA1DE2BDDB0C323B8B22FE6FA275C0973E58DA1AF";
+const K2  = "9dca62ef7818c6b6ec0b2e2873d6f5e3cdbb45f390eb68d9c043c6ac46306c1d91e4cf86da732e5a";
+const CT3 = "4D8F3B0E02310C44AFE203F039C3AEA0A0A0409C209B0C1B8BC8428E43C17939C61638A9A82C7B9E67EC330B4DAD9620A94A8859396683248654DB5182526A1A33F9843234B4AA617500746BA1B07D8D2A589C9B74011B354903BE8861D57FE0CA1606033DEE5904425D105F79433F3D7909EAFDEC8CA7D063D3617577099ABB7B3F68F60854C5AB2D859F7442B31A737F618473D60E6DBA7A29E06AB0C30F";
+const CT4 = "4A16179B71B1966E5A55A234FFC74602CC693EC1B655DE1EA84751C4BA823FE0FEC6297F74F72B86976085751850F5B660B9AF3AB6EE30D5";
+const ct2 = hex2b(CT2), k2 = hex2b(K2), ct3 = hex2b(CT3), ct4 = hex2b(CT4);
+const PT4 = "Colorless green ideas sleep furiously (Noam Chomsky)    ";
+const PT3 = "Ein Auslandsnachrichtendienst, der durch die herausragende Qualität seiner Arbeit und die Integrität seiner Mitarbeiter/-innen einen unverzichtbaren Beitrag für die Sicherheit der Bundesrepublik Deutschland und ihrer Bürger leistet.";
+function hex2b(h){const a=[];for(let i=0;i<h.length;i+=2)a.push(parseInt(h.substr(i,2),16));return Uint8Array.from(a)}
+function b2hex(b,sep){sep=sep||" ";return Array.from(b).map(x=>x.toString(16).padStart(2,"0")).join(sep)}
+function b2asc(b){return Array.from(b).map(x=>(x>=32&&x<127)?String.fromCharCode(x):"·").join("")}
+
+/* ---------- DES (FIPS 46-3), byte-exact, no deps ---------- */
+const DES=(function(){
+  const IP=[58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
+  const FP=[40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
+  const E=[32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1];
+  const P=[16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
+  const PC1=[57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
+  const PC2=[14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
+  const SH=[1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+  const S=[
+  [14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7,0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8,4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0,15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13],
+  [15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10,3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5,0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15,13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9],
+  [10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8,13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1,13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7,1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12],
+  [7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15,13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9,10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4,3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14],
+  [2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9,14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6,4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14,11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3],
+  [12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11,10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8,9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6,4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13],
+  [4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1,13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6,1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2,6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12],
+  [13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7,1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2,7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8,2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]];
+  const bits=b=>{const r=[];for(const x of b)for(let i=7;i>=0;i--)r.push((x>>i)&1);return r};
+  const perm=(src,t)=>t.map(i=>src[i-1]);
+  const tob=a=>{const r=[];for(let i=0;i<a.length;i+=8){let v=0;for(let j=0;j<8;j++)v=v<<1|a[i+j];r.push(v)}return r};
+  function subkeys(key){
+    const k=perm(bits(key),PC1);let C=k.slice(0,28),D=k.slice(28);const out=[];
+    for(const s of SH){C=C.slice(s).concat(C.slice(0,s));D=D.slice(s).concat(D.slice(0,s));out.push(perm(C.concat(D),PC2))}
+    return out;
+  }
+  function f(R,K){
+    const x=perm(R,E).map((b,i)=>b^K[i]),o=[];
+    for(let s=0;s<8;s++){const b=x.slice(s*6,s*6+6),row=b[0]<<1|b[5],col=b[1]<<3|b[2]<<2|b[3]<<1|b[4],v=S[s][row*16+col];
+      for(let i=3;i>=0;i--)o.push((v>>i)&1)}
+    return perm(o,P);
+  }
+  function block(b,ks){
+    let x=perm(bits(b),IP),L=x.slice(0,32),R=x.slice(32);
+    for(const K of ks){const fr=f(R,K);[L,R]=[R,L.map((v,i)=>v^fr[i])]}
+    return tob(perm(R.concat(L),FP));
+  }
+  function ecb(data,key,decrypt){
+    let ks=subkeys(key);if(decrypt)ks=ks.slice().reverse();const out=[];
+    for(let i=0;i<data.length;i+=8)out.push(...block(data.slice(i,i+8),ks));
+    return Uint8Array.from(out);
+  }
+  return {ecb,subkeyHex:key=>subkeys(key).map(k=>tob(k.concat([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])).slice(0,6).map(v=>v.toString(16).padStart(2,'0')).join(''))};
+})();
+
+/* ---------- raw DEFLATE inflater (RFC 1951) with LZ77 token log ---------- */
+function inflateRaw(src){
+  let pos=0,bit=0;const out=[],tokens=[],hdr=[];
+  const rb=n=>{let v=0;for(let i=0;i<n;i++){if(pos>=src.length)throw Error('eof');v|=((src[pos]>>bit)&1)<<i;if(++bit===8){bit=0;pos++}}return v};
+  function huff(lens){const cnt=new Array(16).fill(0),offs=new Array(16).fill(0),sym=[];for(const l of lens)cnt[l]++;cnt[0]=0;
+    for(let i=1;i<16;i++)offs[i]=offs[i-1]+cnt[i-1];lens.forEach((l,s)=>{if(l)sym[offs[l]++]=s});return {cnt,sym}}
+  function dec(h){let code=0,first=0,idx=0;for(let l=1;l<16;l++){code|=rb(1);const c=h.cnt[l];if(code-c<first)return h.sym[idx+(code-first)];idx+=c;first+=c;first<<=1;code<<=1}throw Error('bad code')}
+  const LB=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],LE=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DB=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],DE=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  let final;
+  do{
+    final=rb(1);const type=rb(2);const h={bfinal:final,btype:type};hdr.push(h);
+    if(type===0){bit=0;pos++;const len=src[pos]|src[pos+1]<<8;pos+=4;for(let i=0;i<len;i++){out.push(src[pos]);tokens.push({lit:src[pos++]})}continue}
+    let lt,dt;
+    if(type===1){const l=[];for(let i=0;i<288;i++)l.push(i<144?8:i<256?9:i<280?7:8);lt=huff(l);dt=huff(new Array(30).fill(5))}
+    else if(type===2){
+      const hlit=rb(5)+257,hdist=rb(5)+1,hclen=rb(4)+4;Object.assign(h,{hlit,hdist,hclen});
+      const ORD=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15],cl=new Array(19).fill(0);
+      for(let i=0;i<hclen;i++)cl[ORD[i]]=rb(3);const ch=huff(cl),lens=[];
+      while(lens.length<hlit+hdist){const s=dec(ch);
+        if(s<16)lens.push(s);else if(s===16){const p=lens[lens.length-1],r=3+rb(2);for(let i=0;i<r;i++)lens.push(p)}
+        else{const r=s===17?3+rb(3):11+rb(7);for(let i=0;i<r;i++)lens.push(0)}}
+      lt=huff(lens.slice(0,hlit));dt=huff(lens.slice(hlit));h.headerEnd=pos+bit/8;
+    } else throw Error('btype 3');
+    for(;;){const s=dec(lt);if(s<256){out.push(s);tokens.push({lit:s})}else if(s===256)break;else{
+      const i=s-257,len=LB[i]+rb(LE[i]),ds=dec(dt),dist=DB[ds]+rb(DE[ds]),st=out.length;
+      for(let j=0;j<len;j++)out.push(out[out.length-dist]);tokens.push({len,dist,at:st})}}
+  }while(!final);
+  return {out:Uint8Array.from(out),tokens,hdr};
+}
+
+/* ---------- double transposition (Doppelwürfel) ---------- */
+function colOrder(key){return [...key].map((c,i)=>[c,i]).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:a[1]-b[1]).map(x=>x[1])}
+function transEnc(pt,key){const n=key.length;let s="";for(const c of colOrder(key))for(let i=c;i<pt.length;i+=n)s+=pt[i];return s}
+function transDec(ct,key){const n=key.length,L=ct.length,o=colOrder(key),r=new Array(L);let p=0;for(const c of o)for(let i=c;i<L;i+=n)r[i]=ct[p++];return r.join("")}
+
+const CT1 = "UELNWETTHECSTENAGSEZUCPRLINEIEDISSSCINRADUAZNAETTCÜITWEADLTGCRSNHFTULDHNIHLEATMAZNRHSÜEBUVTSEAN";
+const PT1 = "DIEWÜRDEDESMENSCHENISTUNANTASTBARSIEZUACHTENUNDZUSCHÜTZENISTVERPFLICHTUNGALLERSTAATLICHENGEWALT";
+const DESKEY = hex2b("011f011f010e010e"), DESKEY_PARTNER = hex2b("1f011f010e010e01");
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function group(s,n){return s.split(' ').map((w,i)=>(i%n===n-1)?w+'\n':w).join(' ').replace(/\n /g,'<br>')}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const printable = v => v>=32 && v<127;
+const words = b => Array.from(b,x=>x.toString(16).padStart(2,'0')).join('').replace(/(.{8})(?=.)/g,'$1 ');
+
+/* ---------- language ---------- */
+let LANG = 'de';
+const langHooks = [];
+const T = (de,en) => LANG==='en' ? en : de;
+function applyLang(root){
+  const els = root.matches && root.matches('[data-de]') ? [root] : [];
+  els.concat([...root.querySelectorAll('[data-de]')]).forEach(e=>{
+    const v = e.dataset[LANG]; if(v===undefined) return;
+    if(e.hasAttribute('data-html')) e.innerHTML = v; else e.textContent = v;
+  });
+}
+function setLang(l){
+  LANG = l; document.documentElement.lang = l;
+  $$('.lb-de').forEach(b=>b.classList.toggle('on',l==='de'));
+  $$('.lb-en').forEach(b=>b.classList.toggle('on',l==='en'));
+  applyLang(document.body);
+  document.title = T('Die BND-Krypto-Challenge – vier Rätsel, zwölf Jahre, vier Fallen','The BND Crypto Challenge – four puzzles, twelve years, four traps');
+  langHooks.forEach(f=>f());
+  try{localStorage.setItem('bndlang',l)}catch(e){}
+}
+/* bilingual helpers for generated content */
+function bi(de,en,cls,html){
+  return '<span'+(cls?' class="'+cls+'"':'')+(html?' data-html':'')+' data-de="'+escapeHtml(de)+'" data-en="'+escapeHtml(en)+'">'+(html?T(de,en):escapeHtml(T(de,en)))+'</span>';
+}
+function setBi(el,de,en,html){
+  el.dataset.de = de; el.dataset.en = en;
+  if(html) el.setAttribute('data-html',''); else el.removeAttribute('data-html');
+  applyLang(el);
+}
+
+/* ---------- hero: ciphertext rain ---------- */
+(function(){
+  const c=$('#rain'),x=c.getContext('2d');
+  const ALL=[...ct2,...ct3,...ct4]; let W,H,cols,drops,src,visible=true;
+  const CW=22,RH=18;
+  function rs(){const d=Math.min(devicePixelRatio||1,2);W=c.offsetWidth;H=c.offsetHeight;c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0);
+    cols=Math.ceil(W/CW);drops=Array.from({length:cols},()=>Math.random()*H/RH|0);src=Array.from({length:cols},()=>Math.random()*ALL.length|0)}
+  rs();addEventListener('resize',rs);
+  function tick(){
+    if(!visible||document.hidden)return;
+    x.fillStyle="rgba(8,11,16,0.13)";x.fillRect(0,0,W,H);x.font="500 12px 'JetBrains Mono',monospace";
+    for(let i=0;i<cols;i++){
+      if(Math.random()<.35)continue;
+      const r=Math.random();x.fillStyle=r<.03?"#ffb547":r<.25?"#5cf2b0":"#1f5a44";
+      const b=ALL[src[i]++%ALL.length];
+      x.fillText(b.toString(16).toUpperCase().padStart(2,'0'),i*CW,drops[i]*RH);
+      drops[i]=(drops[i]*RH>H&&Math.random()>.96)?0:drops[i]+1;
+    }
+  }
+  if(REDUCED){for(let k=0;k<40;k++){visible=true;tick()}return}
+  new IntersectionObserver(e=>visible=e[0].isIntersecting).observe($('.hero'));
+  setInterval(tick,70);
+})();
+/* scramble-reveal for the hero subtitle */
+let scrambleTok=0;
+function scramble(el){
+  if(REDUCED)return;
+  const fin=el.textContent,tok=++scrambleTok,G="0123456789ABCDEF⊕#%";let t0=null;
+  function f(ts){
+    if(tok!==scrambleTok)return; if(t0===null)t0=ts;
+    const n=Math.floor((ts-t0)/28);let s="";
+    for(let i=0;i<fin.length;i++)s+=(i<n||fin[i]===' ')?fin[i]:G[Math.random()*G.length|0];
+    el.textContent=s; if(n<fin.length)requestAnimationFrame(f); else el.textContent=fin;
+  }
+  requestAnimationFrame(f);
+}
+langHooks.push(()=>scramble($('#glitch')));
+$$('[data-hexpreview]').forEach(el=>{const b={2:ct2,3:ct3,4:ct4}[el.dataset.hexpreview];el.textContent=b2hex(b.slice(0,30)).toUpperCase()});
+
+/* ---------- top bar, progress, solved stamps ---------- */
+(function(){
+  const bar=$('#topbar'),pr=$('#progress'),hero=$('.hero');
+  function onScroll(){
+    const y=scrollY,max=document.documentElement.scrollHeight-innerHeight;
+    bar.classList.toggle('show',y>hero.offsetHeight*.6);
+    pr.style.width=(max>0?Math.min(100,y/max*100):0)+'%';
+  }
+  addEventListener('scroll',onScroll,{passive:true});onScroll();
+})();
+const solvedSet=new Set();
+function markSolved(n){
+  if(solvedSet.has(n))return;solvedSet.add(n);
+  const led=$('.leds a[data-led="'+n+'"]');if(led)led.classList.add('solved');
+  const d=$('.dossier[data-dossier="'+n+'"]');
+  if(d&&!d.classList.contains('solved')){d.classList.add('solved');const s=d.querySelector('.stamp');setBi(s,s.dataset.solvedDe,s.dataset.solvedEn)}
+}
+markSolved(1);
+(function(){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){markSolved(+e.target.dataset.solveSentinel);io.unobserve(e.target)}}),{rootMargin:'0px 0px -20% 0px'});
+  $$('section[data-solve]').forEach(s=>{const last=s.lastElementChild;last.dataset.solveSentinel=s.dataset.solve;io.observe(last)});
+})();
+$$('.spoiler').forEach(s=>{const t=()=>s.classList.toggle('open');s.onclick=t;s.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t()}}});
+
+/* ---------- stepper ---------- */
+function initDots(id){
+  const n=document.querySelectorAll('#'+id+' .pstep').length;
+  const d=document.getElementById(id+'dots');d.innerHTML='';
+  for(let i=0;i<n;i++)d.appendChild(document.createElement('i'));
+  d.children[0].className='cur';
+  updCount(id,0,n);
+}
+function updCount(id,i,n){const c=document.querySelector('#'+id+' .pcount');if(c)c.textContent=(i+1)+' / '+n}
+function stepper(id,btn,reset){
+  const steps=document.querySelectorAll('#'+id+' .pstep');
+  const dots=document.getElementById(id+'dots').children;
+  let cur=[...steps].findIndex(s=>s.classList.contains('on'));
+  const play=document.getElementById(id);
+  if(reset){steps[cur].classList.remove('on');steps[0].classList.add('on');
+    [...dots].forEach((d,i)=>d.className=i===0?'cur':'');btn.disabled=false;
+    const nb=btn.parentElement.querySelector('button.step');if(nb)nb.disabled=false;
+    updCount(id,0,steps.length);
+    play.dispatchEvent(new CustomEvent('stepchange',{detail:{index:0,reset:true}}));return}
+  if(cur<steps.length-1){
+    steps[cur].classList.remove('on');steps[cur+1].classList.add('on');
+    dots[cur].className='done';dots[cur+1].className='cur';
+    if(cur+1===steps.length-1)btn.disabled=true;
+    updCount(id,cur+1,steps.length);
+    play.dispatchEvent(new CustomEvent('stepchange',{detail:{index:cur+1,reset:false}}));
+    const top=play.getBoundingClientRect().top;if(top<60)play.scrollIntoView({behavior:REDUCED?'auto':'smooth',block:'start'});
+  }
+}
+['pw1','pw1b','pw2','pw3','pw4'].forEach(initDots);
+const onStep=(id,f)=>document.getElementById(id).addEventListener('stepchange',e=>f(e.detail.index,e.detail.reset));
+
+/* ---------- playground 1: mini transposition ---------- */
+(function(){
+  const key="BND", pt="GEHEIMTREFF", order=colOrder(key), n=key.length, rows=Math.ceil(pt.length/n);
+  function grid(el,mark){
+    let h='<table class="tt-grid"><tr>'+[...key].map((c,i)=>'<td class="hdr">'+c+'<small>'+(order.indexOf(i)+1)+'</small></td>').join('')+'</tr>';
+    for(let r=0;r<rows;r++){h+='<tr>';for(let cix=0;cix<n;cix++){
+      const ch=pt[r*n+cix]||'',rk=order.indexOf(cix);
+      h+='<td class="'+(!ch?'empty':mark?(rk===0?'sel':rk===1?'fill':'colon'):'')+'">'+ch+'</td>'}h+='</tr>'}
+    document.getElementById(el).innerHTML=h+'</table>';
+  }
+  grid('tt1grid',false);grid('tt1grid2',true);
+  const out=transEnc(pt,key);
+  document.getElementById('tt1out').textContent=pt+" → "+out;
+})();
+
+/* ---------- playground 1b: the real double transposition ---------- */
+(function(){
+  const K1="VERFASSUNG",K2W="GRUNDGESETZ",L=CT1.length;
+  const MID=transDec(CT1,K1),PT=transDec(MID,K2W);
+  $('#t1ct').textContent=CT1.match(/.{1,5}/g).join(' ');
+  function grid(el,key){
+    const n=key.length,rows=Math.ceil(L/n),o=colOrder(key);
+    let h='<table class="tt-grid"><tr>'+[...key].map((c,i)=>'<td class="hdr" data-col="'+i+'">'+c+'<small>'+(o.indexOf(i)+1)+'</small></td>').join('')+'</tr>';
+    for(let r=0;r<rows;r++){h+='<tr>';for(let c=0;c<n;c++){const i=r*n+c;h+=i<L?'<td data-i="'+i+'"></td>':'<td class="empty"></td>'}h+='</tr>'}
+    $(el).innerHTML=h+'</table>';
+  }
+  function tape(src,consumed,hi){
+    let h='';for(let i=0;i<src.length;i++){h+='<span class="'+(i===hi?'h':i<consumed?'u':'')+'">'+src[i]+'</span>';if(i%5===4)h+=' '}
+    $('#dwTape').innerHTML=h;
+  }
+  let tok=0;
+  function animate(el,key,src,outEl,outText,outCls){
+    const my=++tok,n=key.length,o=colOrder(key);
+    grid(el,key);$(outEl).textContent='';
+    const seq=[];for(const c of o)for(let i=c;i<L;i+=n)seq.push([i,c]);
+    const cells=[...$(el).querySelectorAll('td[data-i]')],hdr=[...$(el).querySelectorAll('td.hdr')];
+    let p=0;
+    function place(){
+      const [i,c]=seq[p];const td=cells[i];td.textContent=src[p];td.className='fill';
+      hdr.forEach((h,k)=>h.classList.toggle('colon',k===c));
+      cells.forEach(t=>t.classList.toggle('sel',+t.dataset.i%n===c&&t.className!=='fill'));
+      p++;
+    }
+    function finish(){
+      hdr.forEach(h=>h.classList.remove('colon'));cells.forEach(t=>t.classList.remove('sel'));
+      tape(src,L,-1);
+      let k=0;const it=()=>{if(my!==tok)return;k=Math.min(L,k+3);$(outEl).textContent=outText.slice(0,k);
+        const row=Math.floor((k-1)/n);cells.forEach(t=>t.classList.toggle('sel',Math.floor(+t.dataset.i/n)===row));
+        if(k<L)setTimeout(it,20);else cells.forEach(t=>t.classList.remove('sel'))};
+      REDUCED?($(outEl).textContent=outText):it();
+    }
+    if(REDUCED){while(p<seq.length)place();finish();return}
+    (function step(){if(my!==tok)return;place();tape(src,p,p<L?p:-1);if(p<seq.length)setTimeout(step,22);else finish()})();
+  }
+  let started=false;
+  const run=i=>{
+    if(i===0)animate('#dwGrid1',K1,CT1,'#dwMid',MID);
+    else if(i===1)animate('#dwGrid2',K2W,MID,'#dwPt',PT);
+    else {tok++;tape(PT,L,-1);lab()}
+  };
+  window.dwReplay=()=>{const i=$$('#pw1b .pstep').findIndex(s=>s.classList.contains('on'));started=true;run(i)};
+  onStep('pw1b',i=>{started=true;run(i)});
+  grid('#dwGrid1',K1);tape(CT1,0,-1);
+  new IntersectionObserver((e,o)=>{if(e[0].isIntersecting&&!started){started=true;run(0);o.disconnect()}},{threshold:.35}).observe($('#pw1b'));
+  const norm=v=>v.toUpperCase().replace(/[^A-ZÄÖÜ]/g,'');
+  function lab(){
+    const a=norm($('#dwK1').value),b=norm($('#dwK2').value),out=$('#dwLab'),box=$('#dwLabOut');
+    if(a.length<2||b.length<2){out.textContent=T('Schlüssel brauchen mindestens 2 Buchstaben.','Keys need at least 2 letters.');box.style.color='var(--dim)';return}
+    const r=transDec(transDec(CT1,a),b);out.textContent=r+(r===PT1?'  ✓':'');
+    box.style.color=r===PT1?'var(--acc)':'var(--red)';box.style.borderColor=r===PT1?'var(--acc-d)':'var(--red)';
+  }
+  $('#dwK1').oninput=lab;$('#dwK2').oninput=lab;
+  $('#dwSwap').onclick=()=>{const a=$('#dwK1').value;$('#dwK1').value=$('#dwK2').value;$('#dwK2').value=a;lab()};
+  langHooks.push(lab);lab();
+})();
+
+/* ---------- playground 3: entropy + DEFLATE ---------- */
+const PT3B = Uint8Array.from([...PT3].map(c=>c.charCodeAt(0)));
+const INF = inflateRaw(ct3);
+function entropy(b){const m=new Array(256).fill(0);for(const x of b)m[x]++;let e=0;for(const c of m)if(c){const p=c/b.length;e-=p*Math.log2(p)}return e}
+function drawHist(id,b,color){
+  const cv=document.getElementById(id),d=Math.min(devicePixelRatio||1,2),w=cv.clientWidth||200,h=70;
+  cv.width=w*d;cv.height=h*d;const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,w,h);
+  const m=new Array(256).fill(0);for(const v of b)m[v]++;const mx=Math.max(...m),bw=w/256;
+  x.fillStyle='#1f2a3a';x.fillRect(w/2,0,1,h);
+  x.fillStyle=color;m.forEach((c,i)=>{if(c){const bh=Math.max(2,c/mx*(h-4));x.fillRect(i*bw,h-bh,Math.max(1,bw-.2),bh)}});
+  const e=entropy(b);document.getElementById(id+'v').textContent=e.toFixed(2).replace('.',LANG==='de'?',':'.');
+  document.getElementById(id+'m').style.width=(e/8*100)+'%';
+}
+let RAND=new Uint8Array(159);
+function rerollRandom(){crypto.getRandomValues(RAND);drawHists()}
+function drawHists(){drawHist('h1',PT3B,'#7cc4ff');drawHist('h2',ct3,'#ffb547');drawHist('h3',RAND,'#ff6b7a')}
+(function(){
+  let h='';ct3.forEach((v,i)=>{h+='<span class="'+(v>=128?'am':'faint')+'">'+v.toString(16).padStart(2,'0')+'</span>'+(i%16===15?'<br>':' ')});
+  $('#t3hex').innerHTML=h;
+  crypto.getRandomValues(RAND);
+  requestAnimationFrame(drawHists);addEventListener('resize',drawHists);langHooks.push(drawHists);
+  // header bit fields, parsed LSB-first exactly like an inflater does
+  let bp=0;const bit=()=>(ct3[bp>>3]>>(bp++&7))&1;
+  const field=(n)=>{let v=0,s='';for(let i=0;i<n;i++){const b=bit();v|=b<<i;s+=b}return [s,v]};
+  const F=[['BFINAL',1,v=>v,v=>v?['letzter Block','last block']:['weitere folgen','more follow']],
+           ['BTYPE',2,v=>v,v=>[['unkomprimiert','stored'],['feste Huffman-Codes','fixed Huffman'],['dynamische Huffman-Codes','dynamic Huffman'],['ungültig','invalid']][v]],
+           ['HLIT',5,v=>v+257,v=>['Literal/Länge-Codes','literal/length codes']],
+           ['HDIST',5,v=>v+1,v=>['Distanz-Codes','distance codes']],
+           ['HCLEN',4,v=>v+4,v=>['Codelängen-Codes','code-length codes']]];
+  $('#t3bits').innerHTML='<div class="bitf"><div class="bn">BYTE 0..2</div><div class="bv">'+[0,1,2].map(i=>'0x'+ct3[i].toString(16).toUpperCase()).join(' ')+'</div><div class="bx">'+[0,1,2].map(i=>ct3[i].toString(2).padStart(8,'0')).join(' ')+'</div></div>'+
+    F.map(([name,n,val,mean])=>{const [s,v]=field(n),m=mean(v);return '<div class="bitf"><div class="bn">'+name+' ('+n+' bit)</div><div class="bv">'+s+'</div><div class="bx">= '+val(v)+'</div><div class="bn" style="color:var(--dim)">'+bi(m[0],m[1])+'</div></div>'}).join('');
+  const hb=Math.ceil(INF.hdr[0].headerEnd);
+  setBi($('#t3hdrnote'),'Die Bits stehen im Strom „rückwärts“: jedes Feld wird ab dem niedrigsten Bit gelesen. Allein die Huffman-Tabellen belegen die ersten ~'+hb+' der 159 Bytes – über ein Viertel des vermeintlichen Chiffrats ist reine Code-Beschreibung.',
+    'The bits sit in the stream “backwards”: each field is read starting from the lowest bit. The Huffman tables alone occupy the first ~'+hb+' of the 159 bytes – over a quarter of the supposed ciphertext is pure code description.');
+  // LZ77 view
+  const toks=INF.tokens,out=INF.out;let lz='',pos=0,refs=0,refB=0;
+  const ch=v=>escapeHtml(String.fromCharCode(v));
+  toks.forEach(t=>{
+    if(t.lit!==undefined){lz+='<span data-p="'+pos+'">'+ch(t.lit)+'</span>';pos++}
+    else{refs++;refB+=t.len;lz+='<span class="ref" data-len="'+t.len+'" data-dist="'+t.dist+'" data-at="'+t.at+'" tabindex="0">';for(let j=0;j<t.len;j++){lz+='<span data-p="'+pos+'">'+ch(out[pos])+'</span>';pos++}lz+='</span>'}
+  });
+  $('#t3lz').innerHTML=lz;
+  const lits=toks.length-refs;
+  setBi($('#t3lzstat'),lits+' Literale + '+refs+' Rückverweise (zusammen '+refB+' kopierte Bytes) → '+out.length+' Bytes Text aus 159 Bytes Strom. Für so einen kurzen Text ist das wenig Wiederholung – deshalb wirkt der Strom so „zufällig“.',
+    lits+' literals + '+refs+' back-references ('+refB+' copied bytes in total) → '+out.length+' bytes of text from a 159-byte stream. That\'s little repetition for such a short text – which is why the stream looks so “random”.');
+  const spans=[...$('#t3lz').querySelectorAll('span[data-p]')],info=$('#t3lzinfo');
+  function show(r){
+    spans.forEach(s=>s.classList.remove('src'));$$('#t3lz .ref').forEach(x=>x.classList.remove('act'));
+    if(!r){info.innerHTML='&nbsp;';return}
+    r.classList.add('act');const at=+r.dataset.at,len=+r.dataset.len,dist=+r.dataset.dist;
+    for(let j=0;j<len;j++)spans[at-dist+j]&&spans[at-dist+j].classList.add('src');
+    const txt=String.fromCharCode(...out.slice(at,at+len));
+    info.innerHTML=T('Rückverweis: kopiere ','back-reference: copy ')+'<span class="am">'+len+'</span>'+T(' Bytes von ',' bytes from ')+'<span class="am">'+dist+'</span>'+T(' Positionen weiter vorne → ',' positions back → ')+'<span class="ok">„'+escapeHtml(txt)+'“</span>';
+  }
+  $$('#t3lz .ref').forEach(r=>{r.onmouseenter=r.onfocus=r.onclick=()=>show(r);r.onmouseleave=()=>show(null)});
+})();
+async function inflate3(btn){
+  const out=$('#t3out');out.style.display='block';btn.disabled=true;
+  const txt=new TextDecoder('latin1').decode(INF.out);
+  setBi($('#t3lbl'),'Dekomprimiert (live, '+INF.out.length+' Bytes, eigener Inflater)','Decompressed (live, '+INF.out.length+' bytes, our own inflater)');
+  const el=$('#t3txt');el.textContent='';
+  if(REDUCED)el.textContent=txt;else{let k=0;(function f(){k=Math.min(txt.length,k+4);el.textContent=txt.slice(0,k);if(k<txt.length)requestAnimationFrame(f)})()}
+  const chk=$('#t3check');chk.style.display='block';
+  try{
+    const ds=new DecompressionStream('deflate-raw');
+    const buf=new Uint8Array(await new Response(new Blob([ct3]).stream().pipeThrough(ds)).arrayBuffer());
+    const same=buf.length===INF.out.length&&buf.every((v,i)=>v===INF.out[i]);
+    setBi(chk,same?'✓ Gegenprobe mit dem DecompressionStream(„deflate-raw“) deines Browsers: byte-identisch.':'✗ Der Browser-Dekompressor liefert etwas anderes?!',
+      same?'✓ Cross-check with your browser\'s DecompressionStream(“deflate-raw”): byte-identical.':'✗ The browser decompressor disagrees?!');
+  }catch(e){
+    setBi(chk,'Dein Browser kennt DecompressionStream(„deflate-raw“) nicht – macht nichts, der eingebaute Inflater (RFC 1951) hat gerade alles selbst erledigt.',
+      'Your browser doesn\'t support DecompressionStream(“deflate-raw”) – no matter, the built-in inflater (RFC 1951) just did all the work itself.');
+  }
+}
+onStep('pw3',(i,reset)=>{if(reset){$('#t3out').style.display='none';$('#t3check').style.display='none';const b=$('#pw3 .pstep button.step');b.disabled=false}if(i===3)markSolved(3)});
+
+/* ---------- playground 2: two-time pad ---------- */
+const X2=[];for(let i=0;i<36;i++)X2.push(ct2[i]^ct2[i+40]);
+(function(){
+  $('#xorspur').innerHTML=X2.map(v=>'<span class="'+(v<32?'am':'dim')+'">'+v.toString(16).padStart(2,'0')+'</span>').join(' ');
+  const bars=$('#bars'),scores=[];
+  for(let k=1;k<=56;k++){let hib=0,n=76-k;for(let i=0;i<n;i++)if((ct2[i]^ct2[i+k])<128)hib++;scores.push(hib/n)}
+  scores.forEach((s,i)=>{
+    const b=document.createElement('div');b.className='bar'+(s>.9?' hot':'');
+    b.style.height=Math.max(3,s*100)+'%';b.title='k='+(i+1)+' → '+(s*100).toFixed(0)+'%';
+    b.onclick=()=>{$('#kslider').value=i+1;kbar(i+1)};bars.appendChild(b)});
+  window.kbar=function(k){
+    k=+k;$('#kval').textContent=k;$('#kscore').textContent=(scores[k-1]*100).toFixed(0)+'%';
+    $('#knote').textContent=k===40?T('← Treffer! 36/36','← hit! 36/36'):k===20?T('← kleiner Buckel, kein Treffer','← small bump, no hit'):'';
+    [...bars.querySelectorAll('.bar')].forEach((b,i)=>b.classList.toggle('sel',i===k-1));
+  };
+  langHooks.push(()=>kbar($('#kslider').value));
+  kbar(8);
+  // workbench
+  const key=new Array(40).fill(null);
+  const mk=(id)=>{const l=$(id);l.innerHTML='<span></span>'.repeat(40);return [...l.children]};
+  const A=mk('#laneA'),B=mk('#laneB'),K=mk('#laneK');
+  $('#keyprog').innerHTML='<i></i>'.repeat(40);const KP=[...$('#keyprog').children];
+  $('#heat').innerHTML='<i></i>'.repeat(76);const HEAT=[...$('#heat').children];
+  HEAT.forEach((h,i)=>h.onclick=()=>{const max=+$('#cribpos').max;if(i<=max){$('#cribpos').value=i;drag()}});
+  const cellOf=p=>p<40?A[p]:B[p-40];
+  const partner=p=>p<36?p+40:(p>=40&&p<76)?p-40:-1;
+  const chScore=v=>/[A-Za-zÄÖÜäöüß ]/.test(String.fromCharCode(v))?1:/[.,;:!?()'\-]/.test(String.fromCharCode(v))?.6:/[0-9]/.test(String.fromCharCode(v))?.3:printable(v)?.05:-1;
+  const cribBytes=()=>[...$('#crib').value].map(c=>c.charCodeAt(0)&255).slice(0,76);
+  function score(w,pos){let s=0,n=0;for(let j=0;j<w.length;j++){const p=pos+j,q=partner(p);if(q<0)continue;s+=chScore(X2[Math.min(p,q)]^w[j]);n++}return n?s/w.length:null}
+  const show=(el,cls,txt)=>{el.className=cls;el.textContent=txt};
+  window.drag=function(){
+    const w=cribBytes(),max=Math.max(0,76-w.length),sl=$('#cribpos');sl.max=max;if(+sl.value>max)sl.value=max;
+    const pos=+sl.value;$('#cribposv').textContent=pos;
+    for(let i=0;i<40;i++){
+      show(A[i],key[i]!==null?'known':'',key[i]!==null?String.fromCharCode(ct2[i]^key[i]).replace(/[^\x20-\x7e]/,'·'):'·');
+      if(i<36)show(B[i],key[i]!==null?'known':'',key[i]!==null?String.fromCharCode(ct2[i+40]^key[i]).replace(/[^\x20-\x7e]/,'·'):'·');
+      else show(B[i],'na',' ');
+      if(i>=36&&!A[i].className)A[i].className='solo';
+      show(K[i],key[i]!==null?'known':'',key[i]!==null?key[i].toString(16).padStart(2,'0'):'··');
+      KP[i].className=key[i]!==null?'k':'';
+    }
+    for(let j=0;j<w.length;j++){
+      const p=pos+j,q=partner(p);show(cellOf(p),'crib'+(q<0?' solo':''),String.fromCharCode(w[j]));
+      if(q>=0){const v=X2[Math.min(p,q)]^w[j];show(cellOf(q),'cp'+(chScore(v)<.3?' bad':''),printable(v)?String.fromCharCode(v):'·')}
+    }
+    const sc=score(w,pos);$('#cribscore').textContent=sc===null?'–':Math.round(Math.max(0,sc)*100)+'%';
+    HEAT.forEach((h,i)=>{const s=i<=max?score(w,i):null;h.style.opacity=s===null?.06:Math.max(.08,Math.pow(Math.max(0,s),3));h.classList.toggle('cur',i===pos)});
+    $('#keycount').textContent=key.filter(v=>v!==null).length;
+    $('#livept').textContent=Array.from(ct2,(c,i)=>key[i%40]===null?'·':String.fromCharCode(c^key[i%40]).replace(/[^\x20-\x7e]/,'·')).join('');
+  };
+  window.setCrib=w=>{$('#crib').value=w;drag()};
+  window.acceptCrib=function(){
+    const w=cribBytes(),pos=+$('#cribpos').value;if(!w.length)return;
+    let conflict=0;
+    for(let j=0;j<w.length;j++){const p=pos+j,kb=ct2[p]^w[j];if(key[p%40]!==null&&key[p%40]!==kb)conflict++;key[p%40]=kb}
+    drag();
+    const n=key.filter(v=>v!==null).length,msg=$('#keymsg');
+    if(n===40){const ok=key.every((v,i)=>v===k2[i]);
+      ok?(setBi(msg,'✓ Alle 40 Key-Bytes rekonstruiert – byte-identisch mit dem echten Key. Weiter geht’s.','✓ All 40 key bytes recovered – byte-identical with the real key. Onwards.'),msg.className='small ok',markSolved(2))
+        :(setBi(msg,'40/40 Bytes gefüllt, aber der Klartext hat Lücken? Mindestens ein Crib war falsch. „Key leeren“ und nochmal.','40/40 bytes filled, but the plaintext has holes? At least one crib was wrong. “Clear key” and try again.'),msg.className='small rd');
+    }else if(conflict){setBi(msg,conflict+' Key-Byte(s) überschrieben – dieser Crib widerspricht einem früheren. Einer von beiden war falsch.',conflict+' key byte(s) overwritten – this crib contradicts an earlier one. One of them was wrong.');msg.className='small am'}
+    else{setBi(msg,n+' von 40 Key-Bytes bekannt. Lies die Live-Entschlüsselung: Welches Wort drängt sich als Nächstes auf?',n+' of 40 key bytes known. Read the live decryption: which word suggests itself next?');msg.className='small dim'}
+  };
+  window.resetKey=()=>{key.fill(null);drag()};
+  drag();
+  // step 3: byte table
+  const pt=ct2.map((c,i)=>c^k2[i%40]);
+  $('#t2pt').textContent=b2asc(pt);
+  $('#t2bytes').innerHTML=Array.from(ct2,(c,i)=>'<div class="b" data-i="'+i+'"><span>'+c.toString(16).padStart(2,'0')+'</span><span>'+k2[i%40].toString(16).padStart(2,'0')+'</span><span>'+(pt[i]===32?'␣':escapeHtml(String.fromCharCode(pt[i])))+'</span></div>').join('');
+  $$('#t2bytes .b').forEach(b=>b.onmouseenter=b.onclick=()=>{const i=+b.dataset.i;
+    $('#t2math').innerHTML='ct['+i+'] = <span class="dim">0x'+ct2[i].toString(16).padStart(2,'0')+'</span> ⊕ key['+(i%40)+'] = <span class="am">0x'+k2[i%40].toString(16).padStart(2,'0')+'</span> → <span class="ok">0x'+pt[i].toString(16).padStart(2,'0')+' „'+escapeHtml(String.fromCharCode(pt[i]))+'“</span>'+(i%40>=36&&i<40?T(' · Einzelbyte – nur einmal im Text',' · single-use byte – occurs only once'):'')});
+  onStep('pw2',i=>{if(i===3)markSolved(2)});
+})();
+
+/* ---------- playground 4: DES lab ---------- */
+const WEAK=[["0101010101010101","w"],["FEFEFEFEFEFEFEFE","w"],["E0E0E0E0F1F1F1F1","w"],["1F1F1F1F0E0E0E0E","w"],
+  ["011F011F010E010E","s"],["1F011F010E010E01","s"],["01E001E001F101F1","s"],["E001E001F101F101","s"],["01FE01FE01FE01FE","s"],["FE01FE01FE01FE01","s"],
+  ["1FE01FE00EF10EF1","s"],["E01FE01FF10EF10E","s"],["1FFE1FFE0EFE0EFE","s"],["FE1FFE1FFE0EFE0E","s"],["E0FEE0FEF1FEF1FE","s"],["FEE0FEE0FEF1FEF1","s"]];
+const PT4LIVE=DES.ecb(ct4,DESKEY,true);
+const vis=s=>s.replace(/ /g,'␣');
+(function(){
+  function buildBattery(){
+    $('#battery').innerHTML=WEAK.map(([k,t],i)=>'<div class="bt" id="bt'+i+'"><span class="kk">'+k+'</span>'+(t==='w'?bi('schwach','weak','ty'):bi('semi-schwach','semi-weak','ty'))+'<span class="mb"><i></i></span><span class="pv">'+'·'.repeat(56)+'</span></div>').join('');
+  }
+  buildBattery();
+  let batTok=0;
+  window.runBattery=function(btn){
+    const my=++batTok;btn.disabled=true;buildBattery();let i=0,hit=-1;
+    (function next(){
+      if(my!==batTok)return;
+      if(i>0)$('#bt'+(i-1)).classList.remove('run');
+      if(i>=WEAK.length){if(hit>=0)$('#bt'+hit).classList.add('hit');
+        setBi(btn,'✓ 1 Treffer von 16','✓ 1 hit out of 16');return}
+      const row=$('#bt'+i),p=DES.ecb(ct4,hex2b(WEAK[i][0]),true),fr=p.filter(printable).length/p.length;
+      row.classList.add('run');row.querySelector('.pv').textContent=b2asc(p);row.querySelector('.mb i').style.width=(fr*100)+'%';
+      if(fr===1)hit=i;i++;setTimeout(next,REDUCED?0:160);
+    })();
+  };
+  // block by block
+  const blocks=$('#t4blocks');
+  function buildBlocks(){blocks.innerHTML=Array.from({length:7},(_,b)=>'<div class="blk" id="t4b'+b+'"><span class="bi">#'+(b+1)+'</span><div class="bh">'+b2hex(ct4.slice(b*8,b*8+4),'')+'<br>'+b2hex(ct4.slice(b*8+4,b*8+8),'')+'</div><div class="bp"> </div></div>').join('');
+    $('#t4pt').textContent='';$('#t4cur').textContent='';window.t4n=0}
+  buildBlocks();
+  window.t4next=function(btn){
+    if(window.t4n>=7){btn.disabled=true;return}
+    const b=window.t4n,p=DES.ecb(ct4.slice(b*8,b*8+8),DESKEY,true),s=String.fromCharCode(...p);
+    const el=$('#t4b'+b);el.classList.add('done');el.querySelector('.bp').textContent='"'+vis(s)+'"';
+    $('#t4pt').textContent=String.fromCharCode(...PT4LIVE.slice(0,(b+1)*8));
+    $('#t4cur').textContent='  ← "'+s+'"';
+    window.t4n++;if(window.t4n>=7)btn.disabled=true;
+  };
+  // subkeys
+  const ska=DES.subkeyHex(DESKEY),skb=DES.subkeyHex(DESKEY_PARTNER),A=ska[0],Bv=ska.find(v=>v!==A);
+  const cls=v=>v===A?'A':v===Bv?'B':'';
+  const row=sk=>sk.map((v,i)=>'<div class="'+cls(v)+'" title="R'+(i+1)+': '+v+'">R'+(i+1)+'<br><b>'+(cls(v)||'?')+'</b></div>').join('');
+  $('#subkA').innerHTML=row(ska);$('#subkB').innerHTML=row(skb);
+  $('#subkA').insertAdjacentHTML('beforebegin','');
+  $('#subkB').insertAdjacentHTML('afterend','<div class="kv" style="margin-top:6px"><span class="ok">A</span> = '+A.slice(0,6)+' '+A.slice(6)+' · <span class="am">B</span> = '+Bv.slice(0,6)+' '+Bv.slice(6)+' '+bi('(48-Bit-Rundenschlüssel, hex)','(48-bit round keys, hex)','faint')+'</div>');
+  window.partnerDemo=function(){
+    const o=$('#partnerOut');o.style.display='block';
+    o.innerHTML='<span class="lbl">DES_encrypt(ct4, 1F011F010E010E01)</span>'+escapeHtml(b2asc(DES.ecb(ct4,DESKEY_PARTNER,false)))+'  ✓';
+  };
+  // typo lab
+  let cur=ct4.slice();
+  const orig=Array.from({length:7},(_,b)=>PT4LIVE.slice(b*8,b*8+8));
+  function renderTypo(){
+    const tb=$('#typoBlocks');let h='',broken=[],changed=[];
+    for(let b=0;b<7;b++){
+      const c=cur.slice(b*8,b*8+8),p=DES.ecb(c,DESKEY,true);let diff=0;
+      for(let j=0;j<8;j++){let x=p[j]^orig[b][j];while(x){diff+=x&1;x>>=1}}
+      if(diff)broken.push([b,diff]);
+      h+='<div class="blk '+(diff?'broken':'done')+'"><span class="bi">#'+(b+1)+'</span><div class="bh">'+Array.from(c,(v,j)=>{const i=b*8+j;if(v!==ct4[i])changed.push(i);return '<span class="byte'+(v!==ct4[i]?' flip':'')+'" data-i="'+i+'">'+v.toString(16).padStart(2,'0')+'</span>'+(j===3?'<br>':j<7?' ':'')}).join('')+'</div><div class="bp">"'+escapeHtml(vis(b2asc(p)))+'"</div>'+(diff?'<div class="tiny rd">'+diff+'/64 bit</div>':'')+'</div>';
+    }
+    tb.innerHTML=h;
+    tb.querySelectorAll('.byte').forEach(s=>s.onclick=()=>{const i=+s.dataset.i;cur[i]^=1;renderTypo()});
+    const info=$('#typoInfo');
+    if(!changed.length)setBi(info,'Chiffrat = BND-Original. Alle 7 Blöcke sauber. Klick auf ein Byte!','Ciphertext = BND original. All 7 blocks clean. Click a byte!');
+    else setBi(info,changed.length+' Byte(s) verändert ('+changed.map(i=>'#'+i).join(', ')+') → '+broken.map(([b,d])=>'Block '+(b+1)+': '+d+' von 64 Klartext-Bits gekippt').join(' · ')+'. Alle anderen Blöcke: unberührt.',
+      changed.length+' byte(s) changed ('+changed.map(i=>'#'+i).join(', ')+') → '+broken.map(([b,d])=>'block '+(b+1)+': '+d+' of 64 plaintext bits flipped').join(' · ')+'. All other blocks: untouched.');
+  }
+  window.typoLoad=function(schmeh){cur=ct4.slice();if(schmeh)cur[38]=0x28;renderTypo()};
+  renderTypo();
+  $('#t4final').textContent=vis(String.fromCharCode(...PT4LIVE));
+  onStep('pw4',(i,reset)=>{
+    if(reset){batTok++;buildBattery();const b=$('#batBtn');b.disabled=false;setBi(b,'▶ Batterie starten','▶ run battery');buildBlocks();$('#pw4 .pstep:nth-child(2) button.step').disabled=false;$('#partnerOut').style.display='none';typoLoad(false)}
+    if(i===4)markSolved(4);
+  });
+})();
+
+/* ---------- playground 5: AES-256-GCM via WebCrypto ---------- */
+let GCM=null;
+async function gcmEncrypt(){
+  const v=$('#gcmView'),o=$('#gcmOut');
+  if(!(window.crypto&&crypto.subtle)){v.innerHTML=bi('WebCrypto ist hier nicht verfügbar (der Browser verlangt einen sicheren Kontext – https oder localhost).','WebCrypto is unavailable here (the browser requires a secure context – https or localhost).','am');return}
+  const key=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(PT4)));
+  const raw=new Uint8Array(await crypto.subtle.exportKey('raw',key));
+  GCM={key,iv,ct};
+  v.innerHTML='<div><span class="faint">key   </span><span class="am">'+words(raw)+'</span></div><div><span class="faint">nonce </span><span class="bl">'+words(iv)+'</span></div><div><span class="faint">ct    </span><span class="dim">'+words(ct.slice(0,ct.length-16))+'</span> <span class="ok">'+words(ct.slice(ct.length-16))+'</span></div><div class="faint tiny">'+bi(ct.length+' Bytes = 56 Bytes Chiffrat + 16 Bytes Authentifizierungs-Tag (grün)',ct.length+' bytes = 56 bytes of ciphertext + 16-byte authentication tag (green)')+'</div>';
+  o.style.display='none';
+}
+async function gcmTamper(flip){
+  if(!GCM)await gcmEncrypt();if(!GCM)return;
+  const o=$('#gcmOut');o.style.display='block';
+  const c=GCM.ct.slice();if(flip)c[38]^=0x03;
+  try{
+    const p=await crypto.subtle.decrypt({name:'AES-GCM',iv:GCM.iv},GCM.key,c);
+    o.style.color='var(--acc)';o.style.borderColor='var(--acc-d)';
+    o.innerHTML='<span class="lbl">'+bi('Entschlüsselt','Decrypted')+'</span>'+escapeHtml(new TextDecoder().decode(p));
+  }catch(e){
+    o.style.color='var(--red)';o.style.borderColor='var(--red)';
+    o.innerHTML='<span class="lbl">'+escapeHtml(e.name||'OperationError')+'</span>'+bi('Byte 38 mit 0x03 verknüpft – genau der Schmeh-Tippfehler (0x2B → 0x28). Ergebnis: kein Müll-Block, sondern ein klares Nein. Das Tag passt nicht, die Entschlüsselung verweigert sich komplett.','Byte 38 XORed with 0x03 – exactly the Schmeh typo (0x2B → 0x28). Result: no garbage block, but a clear no. The tag doesn\'t match, decryption refuses outright.');
+  }
+}
+
+/* ---------- init ---------- */
+(function(){let l='de';try{l=localStorage.getItem('bndlang')||'de'}catch(e){}setLang(l==='en'?'en':'de')})();
+</script>
+</body>
+</html>
