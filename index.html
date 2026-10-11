@@ -1405,7 +1405,9 @@ async function gcmTamper(flip){
 }
 
 /* ---------- init ---------- */
-(function(){let l='de';try{l=localStorage.getItem('bndlang')||'de'}catch(e){}setLang(l==='en'?'en':'de')})();
+(function(){let l=null;try{l=localStorage.getItem('bndlang')}catch(e){}
+if(!l){const n=(navigator.languages&&navigator.languages[0])||navigator.language||'';l=/^en/i.test(n)?'en':'de'}
+setLang(l)})();
 </script>
 </body>
 </html>
